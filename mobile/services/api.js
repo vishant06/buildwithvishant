@@ -1,7 +1,9 @@
 import * as SecureStore from "expo-secure-store";
 
 // Same backend the website talks to — never a second/duplicate API.
-export const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:5000/api";
+export const API_URL =
+  process.env.EXPO_PUBLIC_API_URL ||
+  "https://portfolio-3h2m.onrender.com/api";
 export const SERVER_URL = API_URL.replace(/\/api\/?$/, "");
 
 const TOKEN_KEY = "bwv_token";

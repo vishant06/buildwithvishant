@@ -60,13 +60,34 @@ const callbackUrl = (provider) => `${(process.env.SERVER_URL || 'http://localhos
 const mobileScheme = () => (process.env.MOBILE_APP_SCHEME || 'buildwithvishant').replace(/:\/*$/, '');
 const isMobileFlow = (req) => readCookie(req, 'oauth_target') === 'mobile';
 const targetBase = (req) => (isMobileFlow(req) ? `${mobileScheme()}://auth/callback` : `${clientUrl()}/auth/callback`);
-const redirectWithError = (req, res, message) => res.redirect(`${targetBase(req)}#error=${encodeURIComponent(message)}`);
+const redirectWithError = (req, res, message) => {
+  console.log(
+    "[OAuth ERROR] Redirect:",
+    targetBase(req),
+    "| Error:",
+    message
+  );
+
+  res.redirect(
+    `${targetBase(req)}#error=${encodeURIComponent(message)}`
+  );
+};
 const redirectWithSession = (req, res, user) => {
   const params = new URLSearchParams({
     token: signToken(user._id),
     user: JSON.stringify(publicUser(user))
   });
-  res.redirect(`${targetBase(req)}#${params.toString()}`);
+
+  const redirectUrl = `${targetBase(req)}#${params.toString()}`;
+
+  console.log(
+    "[OAuth SUCCESS] Redirect:",
+    redirectUrl.split("#")[0],
+    "| User:",
+    user.email
+  );
+
+  res.redirect(redirectUrl);
 };
 
 const generateUsername = async (base) => {

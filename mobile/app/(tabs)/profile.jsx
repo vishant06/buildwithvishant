@@ -9,7 +9,6 @@ import { radius } from "../../constants/theme.js";
 
 const LINKS = [
   { label: "Projects", icon: "briefcase-outline", href: "/projects" },
-  { label: "Resume", icon: "document-text-outline", href: "/resume" },
   { label: "Contact", icon: "mail-outline", href: "/contact" },
   { label: "Settings", icon: "settings-outline", href: "/settings" },
 ];

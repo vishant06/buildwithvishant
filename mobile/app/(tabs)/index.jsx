@@ -17,7 +17,6 @@ const QUICK_LINKS = [
   { label: "Playground", icon: "code-slash", href: "/playground" },
   { label: "AI Assistant", icon: "sparkles", href: "/ai" },
   { label: "Projects", icon: "briefcase", href: "/projects" },
-  { label: "Resume", icon: "document-text", href: "/resume" },
   { label: "Contact", icon: "mail", href: "/contact" },
 ];
 

@@ -43,7 +43,6 @@ function ThemedStack() {
         <Stack.Screen name="signup" options={{ title: "Create account" }} />
         <Stack.Screen name="notes/[slug]" options={{ title: "" }} />
         <Stack.Screen name="projects" options={{ title: "Projects" }} />
-        <Stack.Screen name="resume" options={{ title: "Resume" }} />
         <Stack.Screen name="contact" options={{ title: "Contact" }} />
         <Stack.Screen name="settings" options={{ title: "Settings" }} />
         <Stack.Screen name="admin" options={{ headerShown: false }} />

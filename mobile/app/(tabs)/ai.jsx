@@ -126,6 +126,20 @@ export default function AiChat() {
     const message = text.trim();
     if (!message || loading) return;
     setText("");
+
+    // The backend requires auth on /ai/chat (see aiRoutes.js) — same rule
+    // the website enforces in Assistant.jsx. Without this check, a logged-
+    // out user's message would round-trip to a 401 and show a confusing
+    // raw auth error instead of a clear next step.
+    if (!isAuthenticated) {
+      setMessages((items) => [
+        ...items,
+        { role: "user", content: message, time: now() },
+        { role: "assistant", content: "Please login to use the connected AI assistant.", time: now() },
+      ]);
+      return;
+    }
+
     const userMessage = { role: "user", content: message, time: now() };
     const next = [...messages, userMessage];
     setMessages(next);

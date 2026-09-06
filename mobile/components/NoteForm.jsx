@@ -5,6 +5,7 @@ import { uploadThumbnail } from "../services/notes.js";
 import { absoluteAsset } from "../services/api.js";
 import { useAppTheme } from "../context/ThemeContext.jsx";
 import { radius } from "../constants/theme.js";
+import { prepareImageForUpload } from "../utils/image.js";
 
 const DIFFICULTIES = ["Beginner", "Intermediate", "Advanced"];
 
@@ -32,13 +33,14 @@ export default function NoteForm({ initial, onSubmit, submitLabel = "Save note" 
   const pickThumbnail = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) return setError("Photo library permission is required.");
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.8 });
     if (result.canceled) return;
 
     setUploading(true);
     setError("");
     try {
-      const { url } = await uploadThumbnail(result.assets[0]);
+      const prepared = await prepareImageForUpload(result.assets[0], 1200);
+      const { url } = await uploadThumbnail(prepared);
       set("thumbnail")(url);
     } catch (err) {
       setError(err.message);

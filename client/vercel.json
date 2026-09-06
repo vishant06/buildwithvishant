@@ -1,9 +1,8 @@
 {
-  "redirects": [
+  "rewrites": [
     {
       "source": "/(.*)",
-      "destination": "https://www.buildwithvishant.in/$1",
-      "permanent": true
+      "destination": "/index.html"
     }
   ]
 }

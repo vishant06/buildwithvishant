@@ -622,9 +622,20 @@ textarea:focus {
 
 .assistant-body {
   display: grid;
-  grid-template-columns: 220px 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   align-items: start;
+}
+
+/* Show the saved-chats column only when it actually exists.
+   Without this, logged-out users lose 220px of chat width. */
+.assistant-body:has(.saved-chats) {
+  grid-template-columns: 220px minmax(0, 1fr);
+}
+
+.chat {
+  min-width: 0;
+  width: 100%;
 }
 
 .saved-chats {
@@ -816,6 +827,8 @@ body.chat-fullscreen-lock {
 }
 
 .chat-input textarea {
+  flex: 1;
+  min-width: 0;
   min-height: 50px;
   resize: vertical;
 }

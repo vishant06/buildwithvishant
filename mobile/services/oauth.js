@@ -1,3 +1,29 @@
+import * as Linking from "expo-linking";
+import * as WebBrowser from "expo-web-browser";
+import { API_URL } from "./api.js";
+
+const REDIRECT_URL = "buildwithvishant://auth/callback";
+
+const parseCallbackUrl = (url) => {
+  const fragment = url.split("#")[1] || "";
+  const params = new URLSearchParams(fragment);
+
+  const error = params.get("error");
+  if (error) throw new Error(error);
+
+  const token = params.get("token");
+  const userRaw = params.get("user");
+
+  if (!token || !userRaw) {
+    throw new Error("Sign-in response was incomplete. Please try again.");
+  }
+
+  return {
+    token,
+    user: JSON.parse(userRaw),
+  };
+};
+
 export const signInWithProvider = async (provider) => {
   const authUrl = `${API_URL}/auth/${provider}?platform=mobile`;
 
@@ -31,13 +57,10 @@ export const signInWithProvider = async (provider) => {
       });
     };
 
-    // Listen BEFORE opening the browser.
     subscription = Linking.addEventListener("url", ({ url }) => {
       handleUrl(url);
     });
 
-    // Android can deliver the OAuth callback as the app's initial URL
-    // instead of firing the "url" event.
     Linking.getInitialURL()
       .then((initialUrl) => {
         if (initialUrl) {
@@ -55,8 +78,6 @@ export const signInWithProvider = async (provider) => {
           return;
         }
 
-        // Android Custom Tabs can report "dismiss" even after
-        // the OAuth redirect was successfully delivered.
         setTimeout(() => {
           if (!settled) {
             finish(() => resolve(null));

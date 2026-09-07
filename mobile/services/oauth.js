@@ -26,9 +26,7 @@ const parseCallbackUrl = (url) => {
   console.log("[OAUTH] USER:", Boolean(userRaw));
 
   if (!token || !userRaw) {
-    throw new Error(
-      "Sign-in response was incomplete. Please try again."
-    );
+    throw new Error("Sign-in response was incomplete. Please try again.");
   }
 
   let user;
@@ -45,29 +43,29 @@ const parseCallbackUrl = (url) => {
   };
 };
 
-export const signInWithProvider = (provider) => {
+export const signInWithProvider = async (provider) => {
   const authUrl = `${API_URL}/auth/${provider}?platform=mobile`;
 
   console.log("[OAUTH] AUTH URL:", authUrl);
   console.log("[OAUTH] REDIRECT:", REDIRECT_URL);
 
+  let subscription = null;
+  let timeoutId = null;
+  let finished = false;
+
+  const cleanup = () => {
+    if (subscription) {
+      subscription.remove();
+      subscription = null;
+    }
+
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+    }
+  };
+
   return new Promise((resolve, reject) => {
-    let finished = false;
-    let subscription = null;
-    let timeoutId = null;
-
-    const cleanup = () => {
-      if (subscription) {
-        subscription.remove();
-        subscription = null;
-      }
-
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-        timeoutId = null;
-      }
-    };
-
     const finish = (callback) => {
       if (finished) return;
 
@@ -104,16 +102,13 @@ export const signInWithProvider = (provider) => {
       });
     };
 
-    // IMPORTANT:
-    // Android is delivering the callback to MainActivity,
-    // so listen for the deep-link event directly.
+    // Listen for Android deep-link callback.
     subscription = Linking.addEventListener("url", ({ url }) => {
       console.log("[OAUTH] LINKING EVENT:", url);
       handleCallback(url);
     });
 
-    // Also handle the case where Android launches/resumes the app
-    // with the callback URL already available.
+    // Check whether the app was opened directly with the callback URL.
     Linking.getInitialURL()
       .then((initialUrl) => {
         console.log("[OAUTH] INITIAL URL:", initialUrl);
@@ -126,7 +121,6 @@ export const signInWithProvider = (provider) => {
         console.log("[OAUTH] INITIAL URL ERROR:", error);
       });
 
-    // Safety timeout so the Promise never hangs forever.
     timeoutId = setTimeout(() => {
       if (finished) return;
 
@@ -134,40 +128,24 @@ export const signInWithProvider = (provider) => {
 
       finish(() => {
         reject(
-          new Error(
-            "Google sign-in timed out. Please try again."
-          )
+          new Error("Google sign-in timed out. Please try again.")
         );
       });
     }, CALLBACK_TIMEOUT);
 
-    WebBrowser.openAuthSessionAsync(
-      authUrl,
-      REDIRECT_URL
-    )
+    // IMPORTANT:
+    // Do NOT use openAuthSessionAsync here.
+    // Android was returning "dismiss" before the callback reached JS.
+    WebBrowser.openBrowserAsync(authUrl)
       .then((result) => {
         console.log("[OAUTH] BROWSER RESULT:", result);
 
         if (finished) return;
 
-        // Some Android/Expo combinations return the callback
-        // through Linking while WebBrowser reports "dismiss".
-        //
-        // DO NOT resolve null here.
-        if (result.type === "success" && result.url) {
-          handleCallback(result.url);
-          return;
-        }
-
-        if (result.type === "cancel") {
-          finish(() => resolve(null));
-          return;
-        }
-
-        // "dismiss":
-        // Keep waiting for Linking callback.
+        // Browser closing is NOT treated as cancellation.
+        // We continue waiting for the Linking callback.
         console.log(
-          "[OAUTH] BROWSER DISMISSED - WAITING FOR LINKING CALLBACK"
+          "[OAUTH] BROWSER CLOSED - WAITING FOR CALLBACK"
         );
       })
       .catch((error) => {

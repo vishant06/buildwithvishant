@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Link, useRouter } from "expo-router";
-import { useState } from "react";
+import { Link, useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Logo from "../components/Logo.jsx";
 import Screen from "../components/Screen.jsx";
@@ -11,15 +11,24 @@ import { signInWithProvider } from "../services/oauth.js";
 
 export default function Login() {
   const router = useRouter();
-  const { login, applySession } = useAuth();
+  const { login } = useAuth();
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
+  const { oauthError } = useLocalSearchParams();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [oauthProvider, setOauthProvider] = useState(null);
   const [error, setError] = useState("");
+
+  // If app/_layout.jsx's OAuthCallbackListener failed to parse the OAuth
+  // redirect (bad/missing token, malformed user payload, etc.), it sends the
+  // user back here with the reason instead of leaving them stuck on a
+  // spinner — surface it rather than hiding it.
+  useEffect(() => {
+    if (oauthError) setError(String(oauthError));
+  }, [oauthError]);
 
   const submit = async () => {
     if (!email.trim() || !password) return setError("Email and password are required.");
@@ -39,10 +48,12 @@ export default function Login() {
     setOauthProvider(provider);
     setError("");
     try {
-      const session = await signInWithProvider(provider);
-      if (!session) return; // user cancelled
-      await applySession(session.token, session.user);
-      router.replace("/");
+      // Opens the OAuth browser flow. The redirect is caught by the
+      // persistent root-level listener in app/_layout.jsx, which applies
+      // the session and redirects home (or sends us back here with
+      // oauthError set on failure). If the user backs out without
+      // finishing, we just land back here with nothing left to do.
+      await signInWithProvider(provider);
     } catch (err) {
       setError(err.message);
     } finally {

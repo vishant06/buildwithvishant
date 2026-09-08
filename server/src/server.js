@@ -50,6 +50,12 @@ app.get('/', (_req, res) => {
   res.json({ status: 'ok', message: 'Vishant Kumar Portfolio API' });
 });
 
+// Lightweight endpoint for uptime monitors (e.g. UptimeRobot) to ping,
+// so the free Render instance doesn't spin down from inactivity.
+app.get('/health', (_req, res) => {
+  res.status(200).json({ status: 'awake' });
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/contact', contactRoutes);

@@ -77,7 +77,7 @@ const aboutJsonLd = {
       url: SITE_URL,
       name: "BuildWithVishant",
       description:
-        "A developer learning platform.",
+        "A developer learning platform offering programming notes, an in-browser code playground and an AI learning assistant.",
     },
     {
       "@type": ["Organization", "EducationalOrganization"],
@@ -123,7 +123,7 @@ const About = () => (
 
     <SectionHeader
       eyebrow="About BuildWithVishant"
-      title="A developer platform for learning programming, practicing code, and building real projects"
+      title="A developer platform."
     >
       BuildWithVishant is a developer learning platform created by Vishant
       Kumar — built around programming notes, an in-browser coding

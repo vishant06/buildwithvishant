@@ -77,7 +77,7 @@ const aboutJsonLd = {
       url: SITE_URL,
       name: "BuildWithVishant",
       description:
-        "A developer learning platform offering programming notes, an in-browser code playground and an AI learning assistant.",
+        "A developer learning platform.",
     },
     {
       "@type": ["Organization", "EducationalOrganization"],

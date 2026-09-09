@@ -155,6 +155,7 @@ p {
   flex-wrap: wrap;
   gap: 12px;
   align-items: center;
+  margin-top: 18px;
 }
 
 .btn,

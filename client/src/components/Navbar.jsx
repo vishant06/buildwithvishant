@@ -20,7 +20,8 @@ const links = [
   ["Projects", "/projects"],
   ["Playground", "/playground"],
   ["AI", "/ai"],
-  ["Education", "/education"],
+  ["About", "/about"],
+  // ["Education", "/education"],
   ["Contact", "/contact"],
 ];
 

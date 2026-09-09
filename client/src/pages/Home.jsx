@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import DownloadPdfButton from "../components/DownloadPdfButton.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useTheme } from "../context/ThemeContext.jsx";
 import useTypingEffect from "../hooks/useTypingEffect.js";
@@ -266,9 +267,12 @@ const Home = () => {
                       <span>{new Date(note.createdAt).toLocaleDateString()}</span>
                     )}
                   </div>
-                  <Link className="btn primary" to={`/notes/${note.slug}`}>
-                    Read note
-                  </Link>
+                  <div className="note-card-actions">
+                    <Link className="btn primary" to={`/notes/${note.slug}`}>
+                      Read note
+                    </Link>
+                    <DownloadPdfButton slug={note.slug} />
+                  </div>
                 </div>
               </article>
             ))}

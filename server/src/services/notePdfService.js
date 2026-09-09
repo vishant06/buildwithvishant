@@ -153,6 +153,8 @@ function renderCodeLike(doc, content, { bg, fg, label }) {
   const fontSize = 9.5;
   const padding = 10;
   const usableWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+  const textWidth = usableWidth - padding * 2;
+  const textOpts = { width: textWidth, lineGap: 2 };
 
   doc.moveDown(0.3);
   if (label) {
@@ -161,24 +163,40 @@ function renderCodeLike(doc, content, { bg, fg, label }) {
     doc.moveDown(0.15);
   }
 
-  doc.font(FONT.mono).fontSize(fontSize).lineGap(2);
-  const lineHeight = doc.currentLineHeight(true);
-  const availableFullPage = doc.page.height - doc.page.margins.top - doc.page.margins.bottom - padding * 2;
-  const maxLinesPerPage = Math.max(3, Math.floor(availableFullPage / lineHeight) - 1);
+  // `heightOfString` measures text the same way `.text()` will actually
+  // wrap and render it, so using it here (instead of a hand-rolled
+  // `lines * lineHeight` estimate) guarantees the box we draw always
+  // matches where the text really ends — no drift, no overlap with
+  // whatever renders next. A rough per-page line count is still used to
+  // decide *how much* of the block to attempt per page (cheap), but the
+  // box that actually gets drawn is always sized from a real measurement.
+  doc.font(FONT.mono).fontSize(fontSize);
+  const roughLineHeight = doc.currentLineHeight(true) + 2;
+  const fullPageHeight = doc.page.height - doc.page.margins.top - doc.page.margins.bottom - padding * 2;
+  const roughLinesPerPage = Math.max(3, Math.floor(fullPageHeight / roughLineHeight));
+  const measure = (arr) => doc.font(FONT.mono).fontSize(fontSize).heightOfString(arr.join('\n'), textOpts);
 
   let i = 0;
   while (i < lines.length) {
-    const chunk = lines.slice(i, i + maxLinesPerPage);
-    const boxHeight = chunk.length * lineHeight + padding * 2;
+    let chunk = lines.slice(i, i + Math.min(roughLinesPerPage, lines.length - i));
+    let textHeight = measure(chunk);
+
+    // Guard against pathological cases (e.g. one very long line that wraps
+    // into many visual lines): if the measured chunk wouldn't even fit a
+    // fresh page, shrink it until it does, so we never draw a box taller
+    // than a page or overflow past the bottom margin.
+    while (chunk.length > 1 && textHeight + padding * 2 > fullPageHeight) {
+      chunk = chunk.slice(0, -1);
+      textHeight = measure(chunk);
+    }
+
+    const boxHeight = textHeight + padding * 2;
     ensureSpace(doc, boxHeight);
     const startY = doc.y;
 
     doc.roundedRect(doc.page.margins.left, startY, usableWidth, boxHeight, 4).fill(bg);
     doc.fillColor(fg).font(FONT.mono).fontSize(fontSize);
-    doc.text(chunk.join('\n'), doc.page.margins.left + padding, startY + padding, {
-      width: usableWidth - padding * 2,
-      lineGap: 2,
-    });
+    doc.text(chunk.join('\n'), doc.page.margins.left + padding, startY + padding, textOpts);
 
     doc.y = startY + boxHeight;
     doc.x = doc.page.margins.left;
@@ -186,7 +204,6 @@ function renderCodeLike(doc, content, { bg, fg, label }) {
     if (i < lines.length) doc.addPage();
   }
 
-  doc.lineGap(0);
   doc.font(FONT.regular).fillColor(COLORS.text);
   doc.moveDown(0.5);
 }
@@ -363,7 +380,8 @@ function addHeaderAndFooter(doc, note) {
     doc.switchToPage(range.start + i);
     const { left, right } = doc.page.margins;
     const pageWidth = doc.page.width;
-    const footerY = doc.page.height - doc.page.margins.bottom + 20;
+    const pageHeight = doc.page.height;
+    const footerY = pageHeight - PAGE_MARGINS.bottom + 20;
 
     doc.font(FONT.bold).fontSize(9).fillColor(COLORS.accent)
       .text('BuildWithVishant', left, 30, { continued: true })
@@ -372,11 +390,29 @@ function addHeaderAndFooter(doc, note) {
     doc.moveTo(left, 48).lineTo(pageWidth - right, 48).strokeColor(COLORS.border).lineWidth(0.75).stroke();
 
     doc.moveTo(left, footerY - 10).lineTo(pageWidth - right, footerY - 10).strokeColor(COLORS.border).lineWidth(0.75).stroke();
+
+    // The footer text sits inside the bottom margin by design (that's the
+    // whole point of a footer). PDFKit's `.text()` checks the target y
+    // against `page.height - page.margins.bottom` on *every* call, even
+    // when x/y are given explicitly — since footerY is intentionally past
+    // that line, PDFKit was silently calling addPage() for each of the two
+    // calls below, stranding the footer's two halves on two separate,
+    // otherwise-empty pages appended to the end of the document. Relaxing
+    // the bottom margin just for these two calls (and restoring it right
+    // after) keeps the footer inside this page instead of spawning new ones.
+    const realBottomMargin = doc.page.margins.bottom;
+    doc.page.margins.bottom = 0;
     doc.font(FONT.regular).fontSize(8).fillColor(COLORS.muted)
       .text('BuildWithVishant — Developer Learning Resources · https://www.buildwithvishant.in', left, footerY, {
         width: pageWidth - left - right - 90,
+        lineBreak: false,
       });
-    doc.text(`Page ${i + 1} of ${range.count}`, pageWidth - right - 90, footerY, { width: 90, align: 'right' });
+    doc.text(`Page ${i + 1} of ${range.count}`, pageWidth - right - 90, footerY, {
+      width: 90,
+      align: 'right',
+      lineBreak: false,
+    });
+    doc.page.margins.bottom = realBottomMargin;
   }
 }
 

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import DownloadPdfButton from "../components/DownloadPdfButton.jsx";
 import request, { absoluteAsset } from "../services/api.js";
 export default function Notes() {
   const [notes, setNotes] = useState([]);
@@ -69,9 +70,12 @@ export default function Notes() {
                     <span key={tag}>#{tag}</span>
                   ))}
                 </div>
-                <Link className="btn primary" to={`/notes/${n.slug}`}>
-                  Read note
-                </Link>
+                <div className="card-actions">
+                  <Link className="btn primary" to={`/notes/${n.slug}`}>
+                    Read note
+                  </Link>
+                  <DownloadPdfButton slug={n.slug} className="btn ghost" />
+                </div>
               </div>
             </article>
           ))}

@@ -12,7 +12,7 @@ import { prepareImageForUpload } from "../utils/image.js";
 
 export default function Signup() {
   const router = useRouter();
-  const { signup } = useAuth();
+  const { signup, applySession } = useAuth();
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
 
@@ -74,11 +74,10 @@ export default function Signup() {
     setOauthProvider(provider);
     setError("");
     try {
-      // Opens the OAuth browser flow. The redirect is caught by the
-      // persistent root-level listener in app/_layout.jsx, which applies
-      // the session and redirects home (or sends the user to /login with
-      // oauthError set on failure).
-      await signInWithProvider(provider);
+      const session = await signInWithProvider(provider);
+      if (!session) return; // user cancelled
+      await applySession(session.token, session.user);
+      router.replace("/");
     } catch (err) {
       setError(err.message);
     } finally {

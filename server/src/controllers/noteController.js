@@ -1,5 +1,6 @@
 import Note from '../models/Note.js';
 import { deleteCloudinaryAsset, uploadNoteThumbnail } from '../services/cloudinaryService.js';
+import { noteFilename, renderNotePdf } from '../services/notePdfService.js';
 
 const list = (value) => Array.isArray(value) ? value : String(value || '').split(',').map((item) => item.trim()).filter(Boolean);
 const slugify = (value) => String(value).toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -61,6 +62,31 @@ const hasRenderableContent = (data) =>
 export const getNotes = async (req, res) => { const query = { published: true }; if (req.query.category) query.category = req.query.category; if (req.query.difficulty) query.difficulty = req.query.difficulty; if (req.query.tag) query.tags = req.query.tag; if (req.query.search) query.$or = [{ title: new RegExp(req.query.search, 'i') }, { description: new RegExp(req.query.search, 'i') }]; res.json(await Note.find(query).select('-content -blocks').sort({ createdAt: -1 }).populate('author', 'name')); };
 
 export const getNote = async (req, res) => { const note = await Note.findOne({ slug: req.params.slug, published: true }).populate('author', 'name'); if (!note) return res.status(404).json({ message: 'Note not found' }); res.json(note); };
+
+// GET /api/notes/:slug/pdf — requires auth (see `protect` in noteRoutes.js).
+// Only ever looks up a note by its own stored slug/published flag, the same
+// query used by the public getNote handler above, so this can't be used to
+// reach unpublished notes or any file path supplied by the caller.
+export const downloadNotePdf = async (req, res) => {
+  try {
+    const note = await Note.findOne({ slug: req.params.slug, published: true }).populate('author', 'name');
+    if (!note) return res.status(404).json({ message: 'Note not found' });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${noteFilename(note)}"`);
+
+    const doc = renderNotePdf(note, res);
+    doc.on('error', (error) => {
+      console.error('PDF stream error:', error);
+      if (!res.headersSent) res.status(500).json({ message: 'Failed to generate PDF. Please try again.' });
+      else res.end();
+    });
+  } catch (error) {
+    console.error('PDF generation failed:', error);
+    if (!res.headersSent) res.status(500).json({ message: 'Failed to generate PDF. Please try again.' });
+    else res.end();
+  }
+};
 
 export const getAdminNotes = async (_req, res) => res.json(await Note.find().select('-content -blocks').sort({ updatedAt: -1 }).populate('author', 'name'));
 

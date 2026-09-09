@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import DownloadPdfButton from '../components/DownloadPdfButton.jsx';
 import NoteRenderer from '../components/notes/NoteRenderer.jsx';
 import request from '../services/api.js';
 import '../styles/notes-blocks.css';
@@ -83,6 +84,10 @@ export default function NoteDetail() {
           ))}
         </div>
       )}
+
+      <div className="note-reader-actions">
+        <DownloadPdfButton slug={note.slug} />
+      </div>
 
       <div className="note-reader-body">
         <NoteRenderer note={note} />

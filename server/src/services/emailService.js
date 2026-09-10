@@ -3,19 +3,12 @@ import nodemailer from 'nodemailer';
 const isSmtpConfigured = () =>
   Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
 
-// Nodemailer's default connection/greeting timeouts are ~2 minutes each,
-// which leaves a request hanging for a long time before the caller ever
-// finds out delivery failed. 10s is generous for a real SMTP handshake but
-// fails fast when the port is unreachable (e.g. blocked outbound traffic).
 const getTransporter = () =>
   nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT || 587),
     secure: Number(process.env.SMTP_PORT) === 465,
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 10000
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
   });
 
 const clientUrl = () => (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/$/, '');
@@ -46,5 +39,4 @@ export const sendVerificationEmail = async (user, rawToken) => {
   return true;
 };
 
-export { isSmtpConfigured, getTransporter };
-export default { sendVerificationEmail, isSmtpConfigured, getTransporter };
+export default { sendVerificationEmail };

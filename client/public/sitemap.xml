@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://www.buildwithvishant.in/</loc></url>
+  <url><loc>https://www.buildwithvishant.in/about</loc></url>
   <url><loc>https://www.buildwithvishant.in/skills</loc></url>
   <url><loc>https://www.buildwithvishant.in/projects</loc></url>
   <url><loc>https://www.buildwithvishant.in/education</loc></url>
@@ -8,4 +9,5 @@
   <url><loc>https://www.buildwithvishant.in/notes</loc></url>
   <url><loc>https://www.buildwithvishant.in/playground</loc></url>
   <url><loc>https://www.buildwithvishant.in/assistant</loc></url>
+  <url><loc>https://www.buildwithvishant.in/contact</loc></url>
 </urlset>

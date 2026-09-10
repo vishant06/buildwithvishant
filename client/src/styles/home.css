@@ -207,6 +207,26 @@
   color: var(--accent);
 }
 
+/* ---------------------------------------------------------------- */
+/* Note card actions                                                  */
+/* ---------------------------------------------------------------- */
+
+.note-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.note-card-actions .pdf-download {
+  display: inline-flex;
+}
+
+.note-card-actions .pdf-download-notice {
+  flex-basis: 100%;
+}
+
 .note-card-meta {
   display: flex;
   gap: 10px;

@@ -611,7 +611,7 @@ export default function Playground() {
                 <div className="panel-label">
                   Console <button onClick={() => setConsoleLines([])}>Clear</button>
                 </div>
-                <div>
+                <div className="console-output">
                   {consoleLines.map((line, index) => (
                     <p className={line.type} key={line.text + index}>
                       {line.text}

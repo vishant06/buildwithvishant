@@ -13,7 +13,10 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import AboutFaqSection, { aboutFaqItems } from "../components/AboutFaqSection.jsx";
+import ContactSection from "../components/ContactSection.jsx";
 import DownloadPdfButton from "../components/DownloadPdfButton.jsx";
+import Seo from "../components/Seo.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useTheme } from "../context/ThemeContext.jsx";
 import useTypingEffect from "../hooks/useTypingEffect.js";
@@ -72,6 +75,66 @@ const NoteCardSkeleton = () => (
   </div>
 );
 
+const SITE_URL = "https://www.buildwithvishant.in";
+
+// Migrated from the old /about page's JSON-LD (WebSite / Organization /
+// Person), plus a new FAQPage entry built from the About accordion content
+// now that it lives on this page instead of a separate route. Keeping this
+// as the only place that content is marked up avoids duplicate SEO content
+// across two pages.
+const homeJsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": `${SITE_URL}/#website`,
+      url: SITE_URL,
+      name: "BuildWithVishant",
+      description:
+        "A developer learning platform offering programming notes, an in-browser code playground and an AI learning assistant.",
+    },
+    {
+      "@type": ["Organization", "EducationalOrganization"],
+      "@id": `${SITE_URL}/#organization`,
+      name: "BuildWithVishant",
+      url: SITE_URL,
+      founder: { "@id": `${SITE_URL}/#vishant` },
+      description:
+        "Developer platform providing programming notes, an online code playground and AI-assisted learning for students and developers.",
+    },
+    {
+      "@type": "Person",
+      "@id": `${SITE_URL}/#vishant`,
+      name: "Vishant Kumar",
+      url: SITE_URL,
+      jobTitle: "Full Stack MERN Developer",
+      knowsAbout: [
+        "React.js",
+        "Node.js",
+        "Express.js",
+        "MongoDB",
+        "JavaScript",
+        "Web Development",
+        "Software Development",
+      ],
+      alumniOf: {
+        "@type": "CollegeOrUniversity",
+        name:
+          "Sir Chhotu Ram Institute of Engineering & Technology (SCRIET), Chaudhary Charan Singh University, Meerut",
+      },
+    },
+    {
+      "@type": "FAQPage",
+      "@id": `${SITE_URL}/#about-faq`,
+      mainEntity: aboutFaqItems.map((item) => ({
+        "@type": "Question",
+        name: item.question,
+        acceptedAnswer: { "@type": "Answer", text: item.plainText },
+      })),
+    },
+  ],
+};
+
 const Home = () => {
   const { theme } = useTheme();
   const { isAuthenticated, user } = useAuth();
@@ -102,6 +165,12 @@ const Home = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (!window.location.hash) return;
+    const target = document.querySelector(window.location.hash);
+    if (target) requestAnimationFrame(() => target.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }, []);
+
   const latestNotes = useMemo(() => notes.slice(0, 6), [notes]);
   const categories = useMemo(
     () => [...new Set(notes.map((note) => note.category).filter(Boolean))],
@@ -119,6 +188,13 @@ const Home = () => {
 
   return (
     <>
+      <Seo
+        title="BuildWithVishant | Notes, Code Playground & AI for Developers | By Vishant Kumar"
+        description="BuildWithVishant is a developer learning platform by Vishant Kumar — programming notes, an in-browser code playground, and an AI learning assistant, alongside MERN Stack projects and portfolio work."
+        path="/"
+        jsonLd={homeJsonLd}
+      />
+
       {/* ---------------------------------------------------------------- */}
       {/* HERO                                                              */}
       {/* ---------------------------------------------------------------- */}
@@ -397,6 +473,16 @@ const Home = () => {
           </Link>
         </div>
       </motion.section>
+
+      {/* ---------------------------------------------------------------- */}
+      {/* ABOUT / FAQ                                                       */}
+      {/* ---------------------------------------------------------------- */}
+      <AboutFaqSection />
+
+      {/* ---------------------------------------------------------------- */}
+      {/* CONTACT                                                           */}
+      {/* ---------------------------------------------------------------- */}
+      <ContactSection />
     </>
   );
 };

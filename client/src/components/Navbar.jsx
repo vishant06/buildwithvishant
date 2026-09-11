@@ -20,9 +20,7 @@ const links = [
   ["Projects", "/projects"],
   ["Playground", "/playground"],
   ["AI", "/ai"],
-  ["About", "/about"],
   // ["Education", "/education"],
-  ["Contact", "/contact"],
 ];
 
 export default function Navbar() {

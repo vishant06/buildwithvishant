@@ -1,0 +1,138 @@
+.accordion {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.item {
+  border-bottom: 1px solid var(--border);
+}
+
+.item:last-child {
+  border-bottom: none;
+}
+
+.heading {
+  margin: 0;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 20px 22px;
+  text-align: left;
+  font: inherit;
+  color: var(--text);
+  transition: background 0.2s ease;
+}
+
+.trigger:hover,
+.trigger:focus-visible {
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
+.trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.question {
+  font-size: 1.02rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.icon {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-solid);
+  color: var(--accent);
+  transition: transform 0.25s ease, border-color 0.25s ease;
+}
+
+.trigger:hover .icon,
+.iconOpen {
+  border-color: var(--accent);
+}
+
+.iconOpen {
+  transform: rotate(-180deg);
+}
+
+/* Grid-based height animation: the row track animates between 0fr and 1fr,
+   so we never need to measure content height in JS, and the panel content
+   stays mounted in the DOM at all times (just visually clipped) — both for
+   a reliably smooth transition and so the text remains crawlable. */
+.panelOuter {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.35s ease;
+}
+
+.panelOuter.open {
+  grid-template-rows: 1fr;
+}
+
+.panelInner {
+  overflow: hidden;
+  min-height: 0;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.panelOuter.open .panelInner {
+  opacity: 1;
+  transition-delay: 0.08s;
+}
+
+.panelContent {
+  padding: 0 22px 22px;
+  color: var(--muted);
+  line-height: 1.75;
+}
+
+.panelContent p {
+  margin: 0 0 12px;
+}
+
+.panelContent p:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 620px) {
+  .trigger {
+    padding: 16px 16px;
+    gap: 12px;
+  }
+
+  .question {
+    font-size: 0.96rem;
+  }
+
+  .panelContent {
+    padding: 0 16px 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panelOuter,
+  .panelInner,
+  .icon {
+    transition: none;
+  }
+}

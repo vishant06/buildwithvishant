@@ -7,7 +7,8 @@ export const profile = {
 
   email: "kumarvishant602@gmail.com",
   github: "https://github.com/vishant06",
-  linkedin: "https://www.linkedin.com/in/vishant-kohli/"
+  linkedin: "https://www.linkedin.com/in/vishant-kohli/",
+  instagram: "https://www.instagram.com/buildwithvishant/"
 };
 
 export const skills = {

@@ -1,5 +1,6 @@
 
-import { Github, Linkedin, Mail, Phone } from "lucide-react";
+import { Github, Linkedin, Mail, Phone} from "lucide-react";
+import { FaInstagram } from "react-icons/fa";
 import { profile } from "../data/portfolio.js";
 import styles from "./Footer.module.css";
 
@@ -24,6 +25,14 @@ const Footer = () => (
     </div>
 
     <div className={styles.socials}>
+      <a
+        href={profile.instagram}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Instagram"
+      >
+        <FaInstagram size={19} />
+      </a>
       <a
         href={profile.github}
         target="_blank"

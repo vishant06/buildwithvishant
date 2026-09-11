@@ -11,8 +11,22 @@ import {
   Trash2,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import ResizeHandle from "../components/ResizeHandle.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
+import useIsDesktopLayout from "../hooks/useIsDesktopLayout.js";
+import useResizableSplit from "../hooks/useResizableSplit.js";
 import request from "../services/api.js";
+
+// Panel sizing constants for the VS Code-like resizable Playground layout.
+// Minimums are in px and enforced by useResizableSplit regardless of
+// viewport size; defaults/ratios are percentages of their container.
+const MIN_EDITOR_WIDTH = 340;
+const MIN_PREVIEW_WIDTH = 260;
+const MIN_EDITOR_HEIGHT = 160;
+const MIN_CONSOLE_HEIGHT = 90;
+const HANDLE_SIZE = 8;
+const DEFAULT_SPLIT_X = 62; // editor+console column vs preview column
+const DEFAULT_SPLIT_Y = 68; // editor vs console within that column
 
 const initial = {
   html: "<main>\n  <h1>Hello, builder!</h1>\n  <p>Make something delightful.</p>\n</main>",
@@ -121,6 +135,52 @@ export default function Playground() {
   // indefinitely without drifting from the real layout state.
   const [isFitToScreen, setIsFitToScreen] = useState(false);
   const shellRef = useRef(null);
+
+  // --- Resizable layout -------------------------------------------------
+  const isDesktopLayout = useIsDesktopLayout();
+  const splitRowRef = useRef(null); // flex row: [left column] [vhandle] [preview]
+  const leftColumnRef = useRef(null); // flex column: [editor] [hhandle] [console]
+  const editorPanelRef = useRef(null); // wraps <Editor>, observed so Monaco can re-layout
+  const editorInstanceRef = useRef(null);
+
+  const splitX = useResizableSplit({
+    containerRef: splitRowRef,
+    axis: "x",
+    min1: MIN_EDITOR_WIDTH,
+    min2: MIN_PREVIEW_WIDTH,
+    handleSize: HANDLE_SIZE,
+    defaultRatio: DEFAULT_SPLIT_X,
+    storageKey: "playground_split_x",
+    enabled: isDesktopLayout,
+  });
+  const splitY = useResizableSplit({
+    containerRef: leftColumnRef,
+    axis: "y",
+    min1: MIN_EDITOR_HEIGHT,
+    min2: MIN_CONSOLE_HEIGHT,
+    handleSize: HANDLE_SIZE,
+    defaultRatio: DEFAULT_SPLIT_Y,
+    storageKey: "playground_split_y",
+    enabled: isDesktopLayout,
+  });
+
+  // Monaco's `automaticLayout: true` (kept below) already re-measures on a
+  // timer, but that's a polling fallback, not a guarantee it happens the
+  // moment a drag changes the container size. Watching the editor's own
+  // wrapper with a ResizeObserver and calling `editor.layout()` directly is
+  // the mechanism Monaco itself recommends for a container that resizes
+  // outside of a window resize event — this fires on every drag frame and
+  // on every other cause of the panel changing size (window resize,
+  // fit-to-screen toggle, language switch reflow, etc.) in one place.
+  useEffect(() => {
+    const container = editorPanelRef.current;
+    if (!container || typeof ResizeObserver === "undefined") return undefined;
+    const observer = new ResizeObserver(() => {
+      editorInstanceRef.current?.layout();
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
   const isWeb = language === "web";
   const currentCode = isWeb ? code[file] : singleCode;
   const srcDoc = useMemo(() => {
@@ -389,7 +449,15 @@ export default function Playground() {
           {isWeb ? "Browser runtime ready" : "Compiler not configured"}
         </span>
       </div>
-      <div className={"playground-shell" + (isFitToScreen ? " fit-to-screen" : "")} ref={shellRef}>
+      <div
+        className={
+          "playground-shell" +
+          (isFitToScreen ? " fit-to-screen" : "") +
+          (splitX.isDragging ? " resizing-x" : "") +
+          (splitY.isDragging ? " resizing-y" : "")
+        }
+        ref={shellRef}
+      >
         <header className="play-toolbar">
           <div className="play-actions">
             <button className="btn primary" onClick={run} disabled={running}>
@@ -504,59 +572,78 @@ export default function Playground() {
               )}
             </div>
           </aside>
-          <div className="editor-panel">
-            <div className="panel-label">{isWeb ? file : language}</div>
-            <Editor
-              height="100%"
-              theme="vs-dark"
-              language={editorLanguage[isWeb ? file : language] || "plaintext"}
-              value={currentCode}
-              onChange={(value) =>
-                isWeb
-                  ? setCode({ ...code, [file]: value || "" })
-                  : setSingleCode(value || "")
-              }
-              options={{
-                minimap: { enabled: false },
-                fontSize: 14,
-                lineNumbers: "on",
-                wordWrap: "on",
-                padding: { top: 16 },
-                automaticLayout: true,
-              }}
-            />
-          </div>
-          <div className="preview-panel">
-            <div className="panel-label">
-              {isWeb ? "Preview" : "Standard input"}
+          <div className="play-split-row" ref={splitRowRef}>
+            <div
+              className="play-left-column"
+              ref={leftColumnRef}
+              style={isDesktopLayout ? { flexBasis: `calc(${splitX.ratio}% - ${HANDLE_SIZE / 2}px)` } : undefined}
+            >
+              <div className="editor-panel" ref={editorPanelRef} style={isDesktopLayout ? { flexBasis: `calc(${splitY.ratio}% - ${HANDLE_SIZE / 2}px)` } : undefined}>
+                <div className="panel-label">{isWeb ? file : language}</div>
+                <Editor
+                  height="100%"
+                  theme="vs-dark"
+                  language={editorLanguage[isWeb ? file : language] || "plaintext"}
+                  value={currentCode}
+                  onMount={(editorInstance) => {
+                    editorInstanceRef.current = editorInstance;
+                  }}
+                  onChange={(value) =>
+                    isWeb
+                      ? setCode({ ...code, [file]: value || "" })
+                      : setSingleCode(value || "")
+                  }
+                  options={{
+                    minimap: { enabled: false },
+                    fontSize: 14,
+                    lineNumbers: "on",
+                    wordWrap: "on",
+                    padding: { top: 16 },
+                    automaticLayout: true,
+                  }}
+                />
+              </div>
+              <ResizeHandle orientation="horizontal" isDragging={splitY.isDragging} {...splitY.handleProps} />
+              <div
+                className="console-panel"
+                style={isDesktopLayout ? { flexBasis: `calc(${100 - splitY.ratio}% - ${HANDLE_SIZE / 2}px)` } : undefined}
+              >
+                <div className="panel-label">
+                  Console <button onClick={() => setConsoleLines([])}>Clear</button>
+                </div>
+                <div>
+                  {consoleLines.map((line, index) => (
+                    <p className={line.type} key={line.text + index}>
+                      {line.text}
+                    </p>
+                  ))}
+                </div>
+              </div>
             </div>
-            {isWeb ? (
-              <iframe
-                key={runVersion}
-                title="Playground preview"
-                sandbox="allow-scripts"
-                srcDoc={srcDoc}
-              />
-            ) : (
-              <textarea
-                className="stdin-editor"
-                value={stdin}
-                onChange={(event) => setStdin(event.target.value)}
-                placeholder="Optional standard input…"
-              />
-            )}
-          </div>
-        </div>
-        <div className="console-panel">
-          <div className="panel-label">
-            Console <button onClick={() => setConsoleLines([])}>Clear</button>
-          </div>
-          <div>
-            {consoleLines.map((line, index) => (
-              <p className={line.type} key={line.text + index}>
-                {line.text}
-              </p>
-            ))}
+            <ResizeHandle orientation="vertical" isDragging={splitX.isDragging} {...splitX.handleProps} />
+            <div
+              className="preview-panel"
+              style={isDesktopLayout ? { flexBasis: `calc(${100 - splitX.ratio}% - ${HANDLE_SIZE / 2}px)` } : undefined}
+            >
+              <div className="panel-label">
+                {isWeb ? "Preview" : "Standard input"}
+              </div>
+              {isWeb ? (
+                <iframe
+                  key={runVersion}
+                  title="Playground preview"
+                  sandbox="allow-scripts"
+                  srcDoc={srcDoc}
+                />
+              ) : (
+                <textarea
+                  className="stdin-editor"
+                  value={stdin}
+                  onChange={(event) => setStdin(event.target.value)}
+                  placeholder="Optional standard input…"
+                />
+              )}
+            </div>
           </div>
         </div>
       </div>

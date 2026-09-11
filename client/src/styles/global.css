@@ -1162,10 +1162,6 @@ body.chat-fullscreen-lock {
   min-height: 0;
 }
 
-.playground-shell:fullscreen .console-panel {
-  flex: none;
-}
-
 /* Fallback for browsers/contexts where the Fullscreen API is unavailable
    or denied (e.g. some mobile browsers, some embedded iframes) — an
    app-level fixed overlay gives the same "dedicated focused" result. */
@@ -1185,12 +1181,30 @@ body.chat-fullscreen-lock {
   min-height: 0;
 }
 
-.playground-shell.fit-to-screen .console-panel {
-  flex: none;
-}
-
 body:has(.playground-shell.fit-to-screen) {
   overflow: hidden;
+}
+
+/* While actively dragging a divider: block the iframe/editor from
+   swallowing pointer events (pointer capture already targets the handle,
+   this is a defensive second layer for older engines), show the resize
+   cursor even between fast pointer moves, and stop text selection. */
+.playground-shell.resizing-x,
+.playground-shell.resizing-y {
+  user-select: none;
+}
+
+.playground-shell.resizing-x * {
+  cursor: col-resize !important;
+}
+
+.playground-shell.resizing-y * {
+  cursor: row-resize !important;
+}
+
+.playground-shell.resizing-x .preview-panel iframe,
+.playground-shell.resizing-y .preview-panel iframe {
+  pointer-events: none;
 }
 
 .play-toolbar {
@@ -1266,12 +1280,13 @@ body:has(.playground-shell.fit-to-screen) {
 }
 
 .play-body {
-  display: grid;
-  grid-template-columns: 180px minmax(360px, 1.1fr) minmax(300px, .9fr);
+  display: flex;
+  align-items: stretch;
   min-height: 560px;
 }
 
 .file-sidebar {
+  flex: 0 0 180px;
   min-height: 0;
   overflow: hidden;
   padding: 16px 10px;
@@ -1352,16 +1367,37 @@ body:has(.playground-shell.fit-to-screen) {
   color: #fda4af;
 }
 
+.play-split-row {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+}
+
+.play-left-column {
+  flex: 0 0 62%;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .editor-panel,
 .preview-panel {
   min-width: 0;
+  min-height: 0;
   display: grid;
   grid-template-rows: 38px 1fr;
   background: #0b1220;
 }
 
 .editor-panel {
-  border-right: 1px solid rgba(148, 163, 184, .2);
+  flex: 0 0 68%;
+}
+
+.preview-panel {
+  flex: 0 0 38%;
 }
 
 .panel-label {
@@ -1418,13 +1454,17 @@ body:has(.playground-shell.fit-to-screen) {
 }
 
 .console-panel {
-  min-height: 130px;
+  flex: 0 0 32%;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   background: #050913;
-  border-top: 1px solid rgba(148, 163, 184, .2);
 }
 
 .console-panel>div {
-  max-height: 145px;
+  flex: 1;
+  min-height: 0;
   overflow: auto;
   padding: 8px 13px;
   font: .82rem/1.6 ui-monospace, SFMono-Regular, Consolas, monospace;
@@ -1446,6 +1486,57 @@ body:has(.playground-shell.fit-to-screen) {
 
 .console-panel .success {
   color: #86efac;
+}
+
+/* Dividers — subtle at rest, clearly interactive on hover, matching the
+   VS Code feel: a thin line that widens/highlights only when it matters. */
+.resize-handle {
+  position: relative;
+  flex: 0 0 8px;
+  background: rgba(148, 163, 184, .12);
+  touch-action: none;
+}
+
+.resize-handle:hover,
+.resize-handle:focus-visible,
+.resize-handle.dragging {
+  background: color-mix(in srgb, var(--accent) 55%, transparent);
+  outline: none;
+}
+
+.resize-handle-vertical {
+  cursor: col-resize;
+}
+
+.resize-handle-horizontal {
+  cursor: row-resize;
+}
+
+.resize-handle-grip {
+  position: absolute;
+  border-radius: 999px;
+  background: rgba(226, 232, 240, .35);
+}
+
+.resize-handle-vertical .resize-handle-grip {
+  top: 50%;
+  left: 50%;
+  width: 3px;
+  height: 32px;
+  transform: translate(-50%, -50%);
+}
+
+.resize-handle-horizontal .resize-handle-grip {
+  top: 50%;
+  left: 50%;
+  width: 32px;
+  height: 3px;
+  transform: translate(-50%, -50%);
+}
+
+.resize-handle:hover .resize-handle-grip,
+.resize-handle.dragging .resize-handle-grip {
+  background: #0b1220;
 }
 
 /* AI chat */
@@ -1640,8 +1731,8 @@ body:has(.playground-shell.fit-to-screen) {
 }
 
 @media (max-width: 1050px) {
-  .play-body {
-    grid-template-columns: 150px minmax(320px, 1fr) minmax(270px, .8fr);
+  .file-sidebar {
+    flex-basis: 150px;
   }
 
   .play-toolbar {
@@ -1669,21 +1760,45 @@ body:has(.playground-shell.fit-to-screen) {
     justify-content: flex-start;
   }
 
+  /* Below this width, side-by-side panels get too cramped to use — fall
+     back to a simple stacked layout (editor, console, preview) instead of
+     the VS Code-style resizable split. Dividers are hidden since there's
+     nothing to drag once everything is a single column. */
   .play-body {
-    grid-template-columns: 130px 1fr;
-  }
-
-  .preview-panel {
-    grid-column: 2;
-    min-height: 360px;
+    flex-direction: column;
   }
 
   .file-sidebar {
-    grid-row: span 2;
+    flex-basis: auto;
+    border-right: 0;
+    border-bottom: 1px solid rgba(148, 163, 184, .2);
+  }
+
+  .play-split-row {
+    flex-direction: column;
+  }
+
+  .play-left-column {
+    flex: 0 0 auto;
+  }
+
+  .resize-handle {
+    display: none;
   }
 
   .editor-panel {
+    flex: 0 0 auto;
     min-height: 430px;
+  }
+
+  .console-panel {
+    flex: 0 0 auto;
+    min-height: 220px;
+  }
+
+  .preview-panel {
+    flex: 0 0 auto;
+    min-height: 360px;
   }
 
   .chat-input {
@@ -1701,14 +1816,7 @@ body:has(.playground-shell.fit-to-screen) {
     margin-right: -4px;
   }
 
-  .play-body {
-    display: flex;
-    flex-direction: column;
-  }
-
   .file-sidebar {
-    border-right: 0;
-    border-bottom: 1px solid rgba(148, 163, 184, .2);
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
@@ -1726,7 +1834,10 @@ body:has(.playground-shell.fit-to-screen) {
   .editor-panel,
   .preview-panel {
     min-height: 350px;
-    border-right: 0;
+  }
+
+  .console-panel {
+    min-height: 180px;
   }
 
   .message {

@@ -36,6 +36,7 @@ export default function useResizableSplit({
   defaultRatio = 60,
   storageKey,
   enabled = true,
+  onSettle,
 }) {
   const [ratio, setRatio] = useState(() => {
     if (!storageKey) return defaultRatio;
@@ -48,6 +49,8 @@ export default function useResizableSplit({
   });
   const [isDragging, setIsDragging] = useState(false);
   const dragState = useRef(null);
+  const rafRef = useRef(null);
+  const pendingRatioRef = useRef(null);
 
   const getContainerSize = useCallback(() => {
     const el = containerRef.current;
@@ -83,6 +86,12 @@ export default function useResizableSplit({
     [storageKey],
   );
 
+  useEffect(() => {
+    return () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
+
   const onPointerDown = useCallback(
     (event) => {
       if (!enabled || event.button > 0) return;
@@ -107,7 +116,21 @@ export default function useResizableSplit({
       if (!drag || event.pointerId !== drag.pointerId) return;
       const pos = axis === 'x' ? event.clientX : event.clientY;
       const raw = ((pos - drag.origin) / drag.containerSize) * 100;
-      setRatio(clampRatio(raw, drag.containerSize, min1, min2, handleSize));
+      pendingRatioRef.current = clampRatio(raw, drag.containerSize, min1, min2, handleSize);
+      // A native pointermove can fire far more often than the browser can
+      // actually paint (especially on high-poll-rate mice/trackpads). Every
+      // update here re-lays-out Monaco and reflows the preview iframe —
+      // both genuinely expensive — so setting React state synchronously on
+      // every event was causing the browser to fall behind mid-drag,
+      // visible as the editor/console briefly going blank or the preview
+      // rendering at a stale size. Collapsing to one state update per
+      // animation frame (last value wins) keeps the drag smooth.
+      if (rafRef.current === null) {
+        rafRef.current = requestAnimationFrame(() => {
+          rafRef.current = null;
+          if (pendingRatioRef.current !== null) setRatio(pendingRatioRef.current);
+        });
+      }
     },
     [axis, min1, min2, handleSize],
   );
@@ -115,12 +138,29 @@ export default function useResizableSplit({
   const endDrag = useCallback(() => {
     if (!dragState.current) return;
     dragState.current = null;
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    const finalRatio = pendingRatioRef.current;
+    pendingRatioRef.current = null;
     setIsDragging(false);
     setRatio((current) => {
-      persist(current);
-      return current;
+      const settled = finalRatio ?? current;
+      persist(settled);
+      return settled;
     });
-  }, [persist]);
+    // The preview iframe is a separate browsing context and, unlike a
+    // normal element, doesn't reliably re-measure itself just because its
+    // container's flex-basis changed via JS on every drag frame — it can
+    // get stuck rendering at its pre-drag size indefinitely. Dispatching a
+    // resize event is the same nudge `toggleFitToScreen` already uses
+    // elsewhere in this file for the same class of problem, and forces the
+    // iframe (and Monaco, redundantly-but-harmlessly) to re-measure now
+    // that the drag has settled.
+    requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+    onSettle?.();
+  }, [persist, onSettle]);
 
   // Keyboard support: arrow keys nudge the split, Home/Enter resets it —
   // keeps the divider usable without a mouse/touchscreen.

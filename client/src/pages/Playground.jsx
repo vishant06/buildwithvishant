@@ -142,6 +142,23 @@ export default function Playground() {
   const leftColumnRef = useRef(null); // flex column: [editor] [hhandle] [console]
   const editorPanelRef = useRef(null); // wraps <Editor>, observed so Monaco can re-layout
   const editorInstanceRef = useRef(null);
+  const previewFrameRef = useRef(null);
+
+  // The preview <iframe> is a separate browsing context and, in practice,
+  // doesn't reliably notice its container resized just because the
+  // container's flex-basis changed via JS during a drag — it can get stuck
+  // rendering at its pre-drag size indefinitely (confirmed: it does not
+  // self-correct even seconds after the drag ends). Toggling `display`
+  // off and back on forces the browser to fully tear down and re-establish
+  // the iframe's layout/paint, which reliably clears the stale size.
+  const forcePreviewReflow = () => {
+    const frame = previewFrameRef.current;
+    if (!frame) return;
+    frame.style.display = "none";
+    // eslint-disable-next-line no-unused-expressions
+    frame.offsetHeight; // force sync layout so the display:none actually takes effect first
+    frame.style.display = "";
+  };
 
   const splitX = useResizableSplit({
     containerRef: splitRowRef,
@@ -152,6 +169,7 @@ export default function Playground() {
     defaultRatio: DEFAULT_SPLIT_X,
     storageKey: "playground_split_x",
     enabled: isDesktopLayout,
+    onSettle: forcePreviewReflow,
   });
   const splitY = useResizableSplit({
     containerRef: leftColumnRef,
@@ -630,6 +648,7 @@ export default function Playground() {
               </div>
               {isWeb ? (
                 <iframe
+                  ref={previewFrameRef}
                   key={runVersion}
                   title="Playground preview"
                   sandbox="allow-scripts"

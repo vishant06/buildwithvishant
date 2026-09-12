@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 const clampRatio = (ratio, containerSize, min1, min2, handleSize) => {
   if (!containerSize) return ratio;
@@ -62,7 +62,14 @@ export default function useResizableSplit({
   // Re-clamp whenever the container itself resizes, so a previously-valid
   // ratio can't leave a pane smaller than its minimum after the window (or
   // fit-to-screen container) shrinks.
-  useEffect(() => {
+  // useLayoutEffect: this re-clamps `ratio` against the container's real
+  // measured size, so it must run before the browser paints — otherwise a
+  // fast client-side route change can paint one frame with a ratio that
+  // was computed (or restored from localStorage) before the flex layout
+  // had actually settled, and nothing re-triggers the correction unless
+  // the container happens to resize again later (matching the "only a
+  // reload or manual window resize fixes it" symptom).
+  useLayoutEffect(() => {
     const el = containerRef.current;
     if (!el || typeof ResizeObserver === 'undefined') return undefined;
     const observer = new ResizeObserver(() => {

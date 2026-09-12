@@ -10,7 +10,7 @@ import {
   Save,
   Trash2,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import ResizeHandle from "../components/ResizeHandle.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import useIsDesktopLayout from "../hooks/useIsDesktopLayout.js";
@@ -190,7 +190,18 @@ export default function Playground() {
   // outside of a window resize event — this fires on every drag frame and
   // on every other cause of the panel changing size (window resize,
   // fit-to-screen toggle, language switch reflow, etc.) in one place.
-  useEffect(() => {
+  // useLayoutEffect (not useEffect) is deliberate here: this effect exists
+  // purely to measure/react to the container's real DOM size, and
+  // useEffect runs *after* the browser has already painted a frame — so on
+  // a fast client-side route change (component mounts while React Router
+  // just swaps the <Outlet/>, no full page load to naturally settle
+  // everything first) there was a window where Monaco could paint once
+  // against a container that hadn't finished its flex layout, and nothing
+  // ever told it to re-measure unless something *else* later changed size
+  // (a manual window resize, or a hard reload re-doing everything from a
+  // clean slate) — matching exactly the "only reload fixes it" symptom.
+  // useLayoutEffect runs synchronously before paint, closing that window.
+  useLayoutEffect(() => {
     const container = editorPanelRef.current;
     if (!container || typeof ResizeObserver === "undefined") return undefined;
     const observer = new ResizeObserver(() => {
@@ -198,6 +209,34 @@ export default function Playground() {
     });
     observer.observe(container);
     return () => observer.disconnect();
+  }, []);
+
+  // Belt-and-suspenders for the same class of bug: force one settle pass
+  // right when the Playground itself mounts, instead of only reacting to
+  // size *changes*. A ResizeObserver only fires again once something
+  // actually changes size — if the very first measurement was already
+  // wrong (taken before layout/fonts fully settled) and nothing perturbs
+  // the container afterward, it never gets a second chance to correct
+  // itself. The double-rAF here is a standard, minimal way to run code
+  // after the browser has genuinely finished a layout+paint cycle: the
+  // first rAF fires before the next paint, the second fires after it, by
+  // which point flex/grid layout, web fonts, and Monaco's own mount are
+  // all guaranteed settled. This runs once per mount, regardless of
+  // whether the route was reached via a hard reload or client-side
+  // navigation, so both paths converge on the same correct result.
+  useLayoutEffect(() => {
+    let raf1 = null;
+    let raf2 = null;
+    raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        editorInstanceRef.current?.layout();
+        window.dispatchEvent(new Event("resize"));
+      });
+    });
+    return () => {
+      if (raf1 !== null) cancelAnimationFrame(raf1);
+      if (raf2 !== null) cancelAnimationFrame(raf2);
+    };
   }, []);
   const isWeb = language === "web";
   const currentCode = isWeb ? code[file] : singleCode;

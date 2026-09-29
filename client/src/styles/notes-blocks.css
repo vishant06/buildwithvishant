@@ -604,6 +604,7 @@
     min-height: 240px;
   }
 }
+<<<<<<< HEAD
 
 /* ------------------------------------------------------------------ */
 /* Code block actions (Copy / Run) and inline execution output         */
@@ -759,3 +760,5 @@
     animation-duration: 2s;
   }
 }
+=======
+>>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764

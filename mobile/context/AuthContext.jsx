@@ -57,6 +57,7 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+<<<<<<< HEAD
   const resendVerification = () => authApi.resendVerification();
 
   // Re-fetches the current user (e.g. after verifying an email on the web
@@ -68,6 +69,8 @@ export function AuthProvider({ children }) {
     return data.user;
   };
 
+=======
+>>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
   return (
     <AuthContext.Provider
       value={{
@@ -79,8 +82,11 @@ export function AuthProvider({ children }) {
         signup,
         applySession,
         logout,
+<<<<<<< HEAD
         resendVerification,
         refreshUser,
+=======
+>>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
         setUser,
       }}
     >

@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import { Check, Copy, Loader2, Play } from 'lucide-react';
+=======
+import { Check, Copy } from 'lucide-react';
+>>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
 import { useState } from 'react';
 import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter';
 import bash from 'react-syntax-highlighter/dist/esm/languages/prism/bash';
@@ -17,9 +21,13 @@ import rust from 'react-syntax-highlighter/dist/esm/languages/prism/rust';
 import sql from 'react-syntax-highlighter/dist/esm/languages/prism/sql';
 import typescript from 'react-syntax-highlighter/dist/esm/languages/prism/typescript';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+<<<<<<< HEAD
 import useCodeRunner from '../../hooks/useCodeRunner.js';
 import { CODE_LANGUAGE_LABELS } from './blockTypes.js';
 import OutputBlock from './OutputBlock.jsx';
+=======
+import { CODE_LANGUAGE_LABELS } from './blockTypes.js';
+>>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
 
 // Only the languages we actually offer in the editor are registered, so the
 // bundle doesn't ship every Prism grammar.
@@ -40,6 +48,7 @@ SyntaxHighlighter.registerLanguage('php', php);
 SyntaxHighlighter.registerLanguage('go', go);
 SyntaxHighlighter.registerLanguage('rust', rust);
 
+<<<<<<< HEAD
 // `runnable` adds a Run button (only when the language is supported by the
 // execution backend). Off by default so other users of this component, like
 // the AI chat, are unchanged.
@@ -50,6 +59,11 @@ export default function CodeBlock({ language = 'javascript', content = '', title
   const showRun = runnable && canRun;
   const running = status === 'running';
   const lineCount = content.split('\n').length;
+=======
+export default function CodeBlock({ language = 'javascript', content = '', title = '' }) {
+  const [copied, setCopied] = useState(false);
+  const known = Object.prototype.hasOwnProperty.call(CODE_LANGUAGE_LABELS, language) && language !== 'other';
+>>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
 
   const copyCode = async () => {
     try {
@@ -66,6 +80,7 @@ export default function CodeBlock({ language = 'javascript', content = '', title
     <div className="note-code-block">
       <div className="note-code-bar">
         <span className="note-code-lang">{title || CODE_LANGUAGE_LABELS[language] || language}</span>
+<<<<<<< HEAD
         <div className="note-code-actions">
           <button
             type="button"
@@ -91,6 +106,17 @@ export default function CodeBlock({ language = 'javascript', content = '', title
             </button>
           )}
         </div>
+=======
+        <button
+          type="button"
+          className="note-code-copy"
+          onClick={copyCode}
+          aria-label={copied ? 'Code copied to clipboard' : 'Copy code to clipboard'}
+        >
+          {copied ? <Check size={14} /> : <Copy size={14} />}
+          {copied ? 'Copied!' : 'Copy'}
+        </button>
+>>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
       </div>
       {known ? (
         <SyntaxHighlighter
@@ -98,8 +124,11 @@ export default function CodeBlock({ language = 'javascript', content = '', title
           style={oneDark}
           customStyle={{ margin: 0, borderRadius: 0, background: 'transparent', padding: '16px 18px', fontSize: '0.86rem' }}
           codeTagProps={{ style: { fontFamily: 'inherit' } }}
+<<<<<<< HEAD
           showLineNumbers={lineCount > 4}
           lineNumberStyle={{ minWidth: '2.4em', paddingRight: '1em', color: '#475569', userSelect: 'none' }}
+=======
+>>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
           wrapLongLines={false}
         >
           {content}
@@ -107,6 +136,7 @@ export default function CodeBlock({ language = 'javascript', content = '', title
       ) : (
         <pre className="note-code-plain"><code>{content}</code></pre>
       )}
+<<<<<<< HEAD
       {showRun && result && (
         <OutputBlock
           embedded
@@ -118,6 +148,8 @@ export default function CodeBlock({ language = 'javascript', content = '', title
           onClear={clear}
         />
       )}
+=======
+>>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
     </div>
   );
 }

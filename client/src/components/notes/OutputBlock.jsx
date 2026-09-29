@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { X } from 'lucide-react';
 
 // Static "Output" block from the note editor — and, with the optional props,
@@ -33,6 +34,12 @@ export default function OutputBlock({
           </button>
         )}
       </div>
+=======
+export default function OutputBlock({ content = '' }) {
+  return (
+    <div className="note-output-block">
+      <div className="note-output-bar">Output</div>
+>>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
       <pre className="note-output-body"><code>{content}</code></pre>
     </div>
   );

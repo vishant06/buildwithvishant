@@ -20,6 +20,9 @@ export const signup = ({ name, username, email, password, avatar }) => {
 };
 
 export const me = () => request("/auth/me");
+<<<<<<< HEAD
 
 export const resendVerification = () =>
   request("/auth/resend-verification", { method: "POST" });
+=======
+>>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764

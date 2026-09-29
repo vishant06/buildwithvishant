@@ -53,7 +53,11 @@ export default function Navbar() {
           onClick={closeMenu}
           aria-label="VK home"
         >
+<<<<<<< HEAD
           <img src="https://res-console.cloudinary.com/dnx9p4ztk/thumbnails/transform/v1/image/upload/Y19maWxsLGhfMjAwLHdfMjAw/v1/Q2hhdEdQVF9JbWFnZV9TZXBfMTJfMjAyNl8wNF80OV8zNF9QTV95YWtiZGY=/template_primary" alt="VK" />
+=======
+          <img src="https://res.cloudinary.com/dnx9p4ztk/image/upload/v1788552079/Interlocking_BWV_Monogram_Logo_on_Charcoal_Background_tukrum.png" alt="VK" />
+>>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
         </NavLink>
         <div className={`${styles.centerLinks} ${menuOpen ? styles.open : ""}`}>
           {links.map(([label, path]) => (

@@ -26,7 +26,11 @@ const LegacyNote = ({ note }) => (
       </div>
     )}
     {(note.codeExamples || []).map((example, index) => (
+<<<<<<< HEAD
       <CodeBlock key={index} language={example.language || 'javascript'} content={example.code} title={example.title} runnable />
+=======
+      <CodeBlock key={index} language={example.language || 'javascript'} content={example.code} title={example.title} />
+>>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
     ))}
   </div>
 );
@@ -49,7 +53,11 @@ export default function NoteRenderer({ note }) {
           case 'text':
             return <TextBlock key={key} content={block.content} />;
           case 'code':
+<<<<<<< HEAD
             return <CodeBlock key={key} language={block.language} content={block.content} runnable />;
+=======
+            return <CodeBlock key={key} language={block.language} content={block.content} />;
+>>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
           case 'output':
             return <OutputBlock key={key} content={block.content} />;
           case 'bulletList':

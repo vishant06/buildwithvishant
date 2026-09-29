@@ -4,7 +4,10 @@ import BlockEditor from '../../components/notes/BlockEditor.jsx';
 import BulkImportModal from '../../components/notes/BulkImportModal.jsx';
 import { cleanBlocks, legacyToBlocks } from '../../components/notes/blockTypes.js';
 import NoteRenderer from '../../components/notes/NoteRenderer.jsx';
+<<<<<<< HEAD
 import { invalidateNotesCache } from '../../services/notesCache.js';
+=======
+>>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
 import { useAuth } from '../../context/AuthContext.jsx';
 import request, { absoluteAsset } from '../../services/api.js';
 import '../../styles/admin.css';
@@ -286,7 +289,10 @@ const Dashboard = () => {
         await request('/notes', { method: 'POST', body: JSON.stringify(payload) });
         setNoteStatus('Note added.');
       }
+<<<<<<< HEAD
       invalidateNotesCache();
+=======
+>>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
       cancelNoteForm();
       loadData();
     } catch (error) {
@@ -299,7 +305,10 @@ const Dashboard = () => {
     setNoteStatus('');
     try {
       await request(`/notes/${id}`, { method: 'DELETE' });
+<<<<<<< HEAD
       invalidateNotesCache();
+=======
+>>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
       setNoteStatus('Note deleted.');
       loadData();
     } catch (error) {

@@ -1,0 +1,33 @@
+{
+  "name": "vishant-portfolio-server",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "seed:admin": "node src/seedAdmin.js"
+  },
+  "dependencies": {
+    "axios": "^1.20.0",
+    "bcryptjs": "^2.4.3",
+    "cloudinary": "^2.10.0",
+    "cors": "^2.8.6",
+    "dotenv": "^16.6.1",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "groq-sdk": "^1.5.0",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.9.5",
+    "morgan": "^1.10.0",
+    "multer": "^2.0.1",
+    "nodemailer": "^6.9.16",
+    "pdfkit": "^0.15.0",
+    "streamifier": "^0.1.1",
+    "vishant-mern-portfolio": "file:.."
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}

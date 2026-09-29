@@ -1,0 +1,23 @@
+export const executionLanguages = {
+  javascript: { runtime: 'javascript', filename: 'main.js' },
+  typescript: { runtime: 'typescript', filename: 'main.ts' },
+  python: { runtime: 'python', filename: 'main.py' },
+  c: { runtime: 'c', filename: 'main.c' },
+  cpp: { runtime: 'c++', filename: 'main.cpp' },
+  java: { runtime: 'java', filename: 'Main.java' },
+  csharp: { runtime: 'csharp', filename: 'Main.cs' },
+  go: { runtime: 'go', filename: 'main.go' },
+  rust: { runtime: 'rust', filename: 'main.rs' },
+  ruby: { runtime: 'ruby', filename: 'main.rb' },
+  php: { runtime: 'php', filename: 'main.php' },
+  kotlin: { runtime: 'kotlin', filename: 'Main.kt' },
+  swift: { runtime: 'swift', filename: 'main.swift' },
+  dart: { runtime: 'dart', filename: 'main.dart' },
+  r: { runtime: 'r', filename: 'main.r' },
+  scala: { runtime: 'scala', filename: 'Main.scala' },
+  shell: { runtime: 'bash', filename: 'main.sh' },
+  sql: { runtime: 'sqlite3', filename: 'main.sql' },
+  lua: { runtime: 'lua', filename: 'main.lua' },
+  perl: { runtime: 'perl', filename: 'main.pl' },
+  haskell: { runtime: 'haskell', filename: 'Main.hs' }
+};

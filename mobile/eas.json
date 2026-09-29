@@ -1,0 +1,28 @@
+{
+  "cli": {
+    "version": ">= 5.9.0"
+  },
+  "build": {
+    "preview": {
+      "environment": "preview",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://portfolio-3h2m.onrender.com/api"
+      }
+    },
+    "production": {
+      "environment": "production",
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://portfolio-3h2m.onrender.com/api"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

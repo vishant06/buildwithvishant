@@ -1,0 +1,36 @@
+.shell {
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+  /* `clip` hides horizontal overflow without turning the shell into a scroll
+     container, which would stop position: sticky (navbar, notes sidebars)
+     from sticking to the viewport. Older browsers keep `hidden` above. */
+  overflow-x: clip;
+}
+
+.background {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(56, 189, 248, 0.22), transparent 28rem),
+    radial-gradient(circle at 80% 0%, rgba(99, 102, 241, 0.2), transparent 24rem),
+    linear-gradient(135deg, var(--bg), var(--bg-soft));
+  animation: floatGlow 12s ease-in-out infinite alternate;
+}
+
+.main {
+  width: min(1120px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 48px 0 72px;
+}
+
+.main.wide {
+  width: min(1440px, calc(100% - 32px));
+  padding-top: 24px;
+}
+
+@keyframes floatGlow {
+  from { filter: hue-rotate(0deg); transform: scale(1); }
+  to { filter: hue-rotate(18deg); transform: scale(1.04); }
+}

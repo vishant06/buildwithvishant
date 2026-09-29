@@ -1,0 +1,6 @@
+<svg width="640" height="640" viewBox="0 0 640 640" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="640" height="640" rx="160" fill="#111827"/>
+  <circle cx="320" cy="250" r="108" fill="#38bdf8"/>
+  <path d="M140 560c28-108 96-164 180-164s152 56 180 164" fill="#f8fafc"/>
+  <text x="320" y="326" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="116" font-weight="800" fill="#111827">VK</text>
+</svg>

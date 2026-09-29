@@ -1,0 +1,51 @@
+{
+  "expo": {
+    "name": "BuildWithVishant",
+    "slug": "buildwithvishant",
+    "scheme": "buildwithvishant",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "icon": "./assets/logo-icon.png",
+    "backgroundColor": "#07111f",
+    "android": {
+      "package": "com.vishant.buildwithvishant",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/logo-icon.png",
+        "backgroundColor": "#07111f"
+      },
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/logo-splash.png",
+          "backgroundColor": "#111820",
+          "imageWidth": 220,
+          "resizeMode": "contain"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow BuildWithVishant to access your photos to set a profile picture or note thumbnail."
+        }
+      ],
+      "expo-sharing"
+    ],
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "71a48a71-e970-498a-9e1c-d0f68a838787"
+      }
+    }
+  }
+}

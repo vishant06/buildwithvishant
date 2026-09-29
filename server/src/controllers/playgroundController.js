@@ -1,0 +1,7 @@
+import PlaygroundProject from '../models/PlaygroundProject.js';
+const fields = ['title', 'language', 'code', 'html', 'css', 'javascript'];
+const payload = (body) => Object.fromEntries(fields.filter((field) => body[field] !== undefined).map((field) => [field, body[field]]));
+export const mine = async (req, res) => res.json(await PlaygroundProject.find({ owner: req.user._id }).sort({ updatedAt: -1 }));
+export const create = async (req, res) => res.status(201).json(await PlaygroundProject.create({ ...payload(req.body), owner: req.user._id }));
+export const update = async (req, res) => { const project = await PlaygroundProject.findById(req.params.id); if (!project) return res.status(404).json({ message: 'Playground project not found' }); if (String(project.owner) !== String(req.user._id) && req.user.role !== 'admin') return res.status(403).json({ message: 'You can only edit your own projects' }); Object.assign(project, payload(req.body)); res.json(await project.save()); };
+export const remove = async (req, res) => { const project = await PlaygroundProject.findById(req.params.id); if (!project) return res.status(404).json({ message: 'Playground project not found' }); if (String(project.owner) !== String(req.user._id) && req.user.role !== 'admin') return res.status(403).json({ message: 'You can only delete your own projects' }); await project.deleteOne(); res.json({ message: 'Playground project deleted' }); };

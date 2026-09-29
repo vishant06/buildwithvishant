@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as SplashScreen from "expo-splash-screen";
@@ -8,15 +7,6 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AuthProvider, useAuth } from "../context/AuthContext.jsx";
 import { AppThemeProvider, useAppTheme } from "../context/ThemeContext.jsx";
 import { REDIRECT_URL, parseCallbackUrl } from "../services/oauth.js";
-=======
-import { Stack } from "expo-router";
-import { StatusBar } from "expo-status-bar";
-import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { AuthProvider, useAuth } from "../context/AuthContext.jsx";
-import { AppThemeProvider, useAppTheme } from "../context/ThemeContext.jsx";
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
 
 // Keeps the native branded splash (the real BWV logo, configured in
 // app.json) on screen until auth/session restoration and the saved theme
@@ -24,7 +14,6 @@ import { AppThemeProvider, useAppTheme } from "../context/ThemeContext.jsx";
 // blank or unstyled screen between "app opened" and "app usable".
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-<<<<<<< HEAD
 // Owns the OAuth deep-link callback for the entire app session.
 //
 // Why this has to live here and not in app/auth/callback.jsx:
@@ -86,8 +75,6 @@ function OAuthCallbackListener() {
   return null;
 }
 
-=======
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
 function SplashGate({ children }) {
   const { booting } = useAuth();
   const { ready: themeReady } = useAppTheme();
@@ -117,13 +104,8 @@ function ThemedStack() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="login" options={{ title: "Log in" }} />
         <Stack.Screen name="signup" options={{ title: "Create account" }} />
-<<<<<<< HEAD
         <Stack.Screen name="auth/callback" options={{ headerShown: false, gestureEnabled: false }} />
         <Stack.Screen name="notes/[slug]" options={{ title: "" }} />
-=======
-        <Stack.Screen name="notes/[slug]" options={{ title: "" }} />
-        <Stack.Screen name="projects" options={{ title: "Projects" }} />
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
         <Stack.Screen name="contact" options={{ title: "Contact" }} />
         <Stack.Screen name="settings" options={{ title: "Settings" }} />
         <Stack.Screen name="admin" options={{ headerShown: false }} />
@@ -137,10 +119,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AppThemeProvider>
         <AuthProvider>
-<<<<<<< HEAD
           <OAuthCallbackListener />
-=======
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
           <SplashGate>
             <ThemedStack />
           </SplashGate>

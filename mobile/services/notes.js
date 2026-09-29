@@ -1,9 +1,5 @@
-<<<<<<< HEAD
 import { File, Paths } from "expo-file-system";
 import request, { API_URL, tokenStore } from "./api.js";
-=======
-import request from "./api.js";
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
 
 // Public
 export const listNotes = (params = {}) => {
@@ -15,7 +11,6 @@ export const listNotes = (params = {}) => {
 
 export const getNote = (slug) => request(`/notes/${slug}`);
 
-<<<<<<< HEAD
 // Mirrors web's downloadNotePdf (client/src/services/api.js) status/error
 // handling exactly — same 401/404/generic-message logic — but adapted for
 // React Native: no Blob/<a download>, so the bytes are written to a real
@@ -65,8 +60,6 @@ export const downloadNotePdf = async (slug) => {
   return { uri: file.uri, filename };
 };
 
-=======
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
 // Admin
 export const listAdminNotes = () => request("/notes/admin/all");
 export const getAdminNote = (id) => request(`/notes/admin/${id}`);

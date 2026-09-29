@@ -1,11 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-<<<<<<< HEAD
 import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-=======
-import { Link, useRouter } from "expo-router";
-import { useState } from "react";
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
 import { ActivityIndicator, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Logo from "../components/Logo.jsx";
 import Screen from "../components/Screen.jsx";
@@ -16,16 +11,10 @@ import { signInWithProvider } from "../services/oauth.js";
 
 export default function Login() {
   const router = useRouter();
-<<<<<<< HEAD
   const { login } = useAuth();
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
   const { oauthError } = useLocalSearchParams();
-=======
-  const { login, applySession } = useAuth();
-  const { colors } = useAppTheme();
-  const styles = getStyles(colors);
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,7 +22,6 @@ export default function Login() {
   const [oauthProvider, setOauthProvider] = useState(null);
   const [error, setError] = useState("");
 
-<<<<<<< HEAD
   // If app/_layout.jsx's OAuthCallbackListener failed to parse the OAuth
   // redirect (bad/missing token, malformed user payload, etc.), it sends the
   // user back here with the reason instead of leaving them stuck on a
@@ -42,8 +30,6 @@ export default function Login() {
     if (oauthError) setError(String(oauthError));
   }, [oauthError]);
 
-=======
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
   const submit = async () => {
     if (!email.trim() || !password) return setError("Email and password are required.");
     setLoading(true);
@@ -62,19 +48,12 @@ export default function Login() {
     setOauthProvider(provider);
     setError("");
     try {
-<<<<<<< HEAD
       // Opens the OAuth browser flow. The redirect is caught by the
       // persistent root-level listener in app/_layout.jsx, which applies
       // the session and redirects home (or sends us back here with
       // oauthError set on failure). If the user backs out without
       // finishing, we just land back here with nothing left to do.
       await signInWithProvider(provider);
-=======
-      const session = await signInWithProvider(provider);
-      if (!session) return; // user cancelled
-      await applySession(session.token, session.user);
-      router.replace("/");
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
     } catch (err) {
       setError(err.message);
     } finally {

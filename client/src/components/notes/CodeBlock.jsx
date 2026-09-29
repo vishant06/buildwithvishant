@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 import { Check, Copy, Loader2, Play } from 'lucide-react';
-=======
-import { Check, Copy } from 'lucide-react';
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
 import { useState } from 'react';
 import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter';
 import bash from 'react-syntax-highlighter/dist/esm/languages/prism/bash';
@@ -21,13 +17,9 @@ import rust from 'react-syntax-highlighter/dist/esm/languages/prism/rust';
 import sql from 'react-syntax-highlighter/dist/esm/languages/prism/sql';
 import typescript from 'react-syntax-highlighter/dist/esm/languages/prism/typescript';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
-<<<<<<< HEAD
 import useCodeRunner from '../../hooks/useCodeRunner.js';
 import { CODE_LANGUAGE_LABELS } from './blockTypes.js';
 import OutputBlock from './OutputBlock.jsx';
-=======
-import { CODE_LANGUAGE_LABELS } from './blockTypes.js';
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
 
 // Only the languages we actually offer in the editor are registered, so the
 // bundle doesn't ship every Prism grammar.
@@ -48,22 +40,29 @@ SyntaxHighlighter.registerLanguage('php', php);
 SyntaxHighlighter.registerLanguage('go', go);
 SyntaxHighlighter.registerLanguage('rust', rust);
 
-<<<<<<< HEAD
 // `runnable` adds a Run button (only when the language is supported by the
 // execution backend). Off by default so other users of this component, like
 // the AI chat, are unchanged.
-export default function CodeBlock({ language = 'javascript', content = '', title = '', runnable = false }) {
+export default function CodeBlock({
+  language = 'javascript',
+  content = '',
+  title = '',
+  runnable = false,
+}) {
   const [copied, setCopied] = useState(false);
-  const known = Object.prototype.hasOwnProperty.call(CODE_LANGUAGE_LABELS, language) && language !== 'other';
-  const { canRun, status, result, run, clear } = useCodeRunner({ language, code: content });
+
+  const known =
+    Object.prototype.hasOwnProperty.call(CODE_LANGUAGE_LABELS, language) &&
+    language !== 'other';
+
+  const { canRun, status, result, run, clear } = useCodeRunner({
+    language,
+    code: content,
+  });
+
   const showRun = runnable && canRun;
   const running = status === 'running';
   const lineCount = content.split('\n').length;
-=======
-export default function CodeBlock({ language = 'javascript', content = '', title = '' }) {
-  const [copied, setCopied] = useState(false);
-  const known = Object.prototype.hasOwnProperty.call(CODE_LANGUAGE_LABELS, language) && language !== 'other';
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
 
   const copyCode = async () => {
     try {
@@ -79,64 +78,77 @@ export default function CodeBlock({ language = 'javascript', content = '', title
   return (
     <div className="note-code-block">
       <div className="note-code-bar">
-        <span className="note-code-lang">{title || CODE_LANGUAGE_LABELS[language] || language}</span>
-<<<<<<< HEAD
+        <span className="note-code-lang">
+          {title || CODE_LANGUAGE_LABELS[language] || language}
+        </span>
+
         <div className="note-code-actions">
           <button
             type="button"
             className="note-code-copy"
             onClick={copyCode}
-            aria-label={copied ? 'Code copied to clipboard' : 'Copy code to clipboard'}
+            aria-label={
+              copied
+                ? 'Code copied to clipboard'
+                : 'Copy code to clipboard'
+            }
           >
             {copied ? <Check size={14} /> : <Copy size={14} />}
             <span>{copied ? 'Copied!' : 'Copy'}</span>
           </button>
+
           {showRun && (
             <button
               type="button"
-              className={`note-code-run${running ? ' is-running' : ''}${status === 'success' ? ' is-success' : ''}${status === 'error' ? ' is-error' : ''}`}
+              className={`note-code-run${running ? ' is-running' : ''}${
+                status === 'success' ? ' is-success' : ''
+              }${status === 'error' ? ' is-error' : ''}`}
               onClick={run}
               disabled={running}
               aria-busy={running}
               aria-label={running ? 'Running code' : 'Run code'}
               title={running ? 'Running…' : 'Run code'}
             >
-              {running ? <Loader2 size={14} className="note-code-spin" /> : <Play size={14} />}
+              {running ? (
+                <Loader2 size={14} className="note-code-spin" />
+              ) : (
+                <Play size={14} />
+              )}
               <span>{running ? 'Running…' : 'Run'}</span>
             </button>
           )}
         </div>
-=======
-        <button
-          type="button"
-          className="note-code-copy"
-          onClick={copyCode}
-          aria-label={copied ? 'Code copied to clipboard' : 'Copy code to clipboard'}
-        >
-          {copied ? <Check size={14} /> : <Copy size={14} />}
-          {copied ? 'Copied!' : 'Copy'}
-        </button>
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
       </div>
+
       {known ? (
         <SyntaxHighlighter
           language={language}
           style={oneDark}
-          customStyle={{ margin: 0, borderRadius: 0, background: 'transparent', padding: '16px 18px', fontSize: '0.86rem' }}
+          customStyle={{
+            margin: 0,
+            borderRadius: 0,
+            background: 'transparent',
+            padding: '16px 18px',
+            fontSize: '0.86rem',
+          }}
           codeTagProps={{ style: { fontFamily: 'inherit' } }}
-<<<<<<< HEAD
           showLineNumbers={lineCount > 4}
-          lineNumberStyle={{ minWidth: '2.4em', paddingRight: '1em', color: '#475569', userSelect: 'none' }}
-=======
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
+          lineNumberStyle={{
+            minWidth: '2.4em',
+            paddingRight: '1em',
+            color: '#475569',
+            userSelect: 'none',
+          }}
           wrapLongLines={false}
         >
           {content}
         </SyntaxHighlighter>
       ) : (
-        <pre className="note-code-plain"><code>{content}</code></pre>
+        <pre className="note-code-plain">
+          <code>{content}</code>
+        </pre>
       )}
-<<<<<<< HEAD
+
       {showRun && result && (
         <OutputBlock
           embedded
@@ -144,12 +156,14 @@ export default function CodeBlock({ language = 'javascript', content = '', title
           variant={result.ok ? 'success' : 'error'}
           title={result.title}
           meta={result.meta}
-          content={result.empty ? 'Execution completed with no output.' : result.text}
+          content={
+            result.empty
+              ? 'Execution completed with no output.'
+              : result.text
+          }
           onClear={clear}
         />
       )}
-=======
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
     </div>
   );
 }

@@ -18,25 +18,35 @@ const LegacyNote = ({ note }) => (
       <div className="note-block-text">
         {note.content.split('\n').map((line, index) => {
           if (!line.trim()) return null;
-          if (line.startsWith('#### ')) return <h4 key={index}>{line.slice(5)}</h4>;
-          if (line.startsWith('### ')) return <h3 key={index}>{line.slice(4)}</h3>;
-          if (line.startsWith('## ')) return <h2 key={index}>{line.slice(3)}</h2>;
+          if (line.startsWith('#### ')) {
+            return <h4 key={index}>{line.slice(5)}</h4>;
+          }
+          if (line.startsWith('### ')) {
+            return <h3 key={index}>{line.slice(4)}</h3>;
+          }
+          if (line.startsWith('## ')) {
+            return <h2 key={index}>{line.slice(3)}</h2>;
+          }
           return <p key={index}>{line}</p>;
         })}
       </div>
     )}
+
     {(note.codeExamples || []).map((example, index) => (
-<<<<<<< HEAD
-      <CodeBlock key={index} language={example.language || 'javascript'} content={example.code} title={example.title} runnable />
-=======
-      <CodeBlock key={index} language={example.language || 'javascript'} content={example.code} title={example.title} />
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
+      <CodeBlock
+        key={index}
+        language={example.language || 'javascript'}
+        content={example.code}
+        title={example.title}
+        runnable
+      />
     ))}
   </div>
 );
 
 export default function NoteRenderer({ note }) {
   if (!note) return null;
+
   const blocks = note.blocks || [];
 
   if (blocks.length === 0) {
@@ -47,31 +57,82 @@ export default function NoteRenderer({ note }) {
     <div className="note-blocks">
       {blocks.map((block, index) => {
         const key = `${block.type}-${index}`;
+
         switch (block.type) {
           case 'heading':
-            return <HeadingBlock key={key} level={block.level} content={block.content} />;
+            return (
+              <HeadingBlock
+                key={key}
+                level={block.level}
+                content={block.content}
+              />
+            );
+
           case 'text':
             return <TextBlock key={key} content={block.content} />;
+
           case 'code':
-<<<<<<< HEAD
-            return <CodeBlock key={key} language={block.language} content={block.content} runnable />;
-=======
-            return <CodeBlock key={key} language={block.language} content={block.content} />;
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
+            return (
+              <CodeBlock
+                key={key}
+                language={block.language}
+                content={block.content}
+                runnable
+              />
+            );
+
           case 'output':
             return <OutputBlock key={key} content={block.content} />;
+
           case 'bulletList':
-            return <ListBlock key={key} ordered={false} items={block.items} />;
+            return (
+              <ListBlock
+                key={key}
+                ordered={false}
+                items={block.items}
+              />
+            );
+
           case 'numberedList':
-            return <ListBlock key={key} ordered items={block.items} />;
+            return (
+              <ListBlock
+                key={key}
+                ordered
+                items={block.items}
+              />
+            );
+
           case 'callout':
-            return <CalloutBlock key={key} calloutType={block.calloutType} content={block.content} />;
+            return (
+              <CalloutBlock
+                key={key}
+                calloutType={block.calloutType}
+                content={block.content}
+              />
+            );
+
           case 'image':
-            return <ImageBlock key={key} url={block.url} alt={block.alt} caption={block.caption} />;
+            return (
+              <ImageBlock
+                key={key}
+                url={block.url}
+                alt={block.alt}
+                caption={block.caption}
+              />
+            );
+
           case 'table':
-            return <TableBlock key={key} headers={block.headers} rows={block.rows} />;
+            return (
+              <TableBlock
+                key={key}
+                headers={block.headers}
+                rows={block.rows}
+              />
+            );
+
           case 'divider':
             return <DividerBlock key={key} />;
+
           default:
             return null;
         }

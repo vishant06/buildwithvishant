@@ -2,13 +2,10 @@
   min-height: 100vh;
   position: relative;
   overflow-x: hidden;
-<<<<<<< HEAD
   /* `clip` hides horizontal overflow without turning the shell into a scroll
      container, which would stop position: sticky (navbar, notes sidebars)
      from sticking to the viewport. Older browsers keep `hidden` above. */
   overflow-x: clip;
-=======
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
 }
 
 .background {
@@ -28,14 +25,11 @@
   padding: 48px 0 72px;
 }
 
-<<<<<<< HEAD
 .main.wide {
   width: min(1440px, calc(100% - 32px));
   padding-top: 24px;
 }
 
-=======
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
 @keyframes floatGlow {
   from { filter: hue-rotate(0deg); transform: scale(1); }
   to { filter: hue-rotate(18deg); transform: scale(1.04); }

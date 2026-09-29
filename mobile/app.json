@@ -6,16 +6,8 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
-<<<<<<< HEAD
     "icon": "./assets/logo-icon.png",
     "backgroundColor": "#07111f",
-=======
-
-    "icon": "./assets/logo-icon.png",
-
-    "backgroundColor": "#07111f",
-
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
     "android": {
       "package": "com.vishant.buildwithvishant",
       "adaptiveIcon": {
@@ -28,10 +20,6 @@
         "android.permission.RECORD_AUDIO"
       ]
     },
-<<<<<<< HEAD
-=======
-
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
     "plugins": [
       "expo-router",
       [
@@ -48,15 +36,9 @@
         {
           "photosPermission": "Allow BuildWithVishant to access your photos to set a profile picture or note thumbnail."
         }
-<<<<<<< HEAD
       ],
       "expo-sharing"
     ],
-=======
-      ]
-    ],
-
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
     "extra": {
       "router": {
         "origin": false
@@ -66,8 +48,4 @@
       }
     }
   }
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764

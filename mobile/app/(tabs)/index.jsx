@@ -1,13 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
-<<<<<<< HEAD
 import { useCallback, useMemo, useState } from "react";
 import { Image, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Accordion from "../../components/Accordion.jsx";
-=======
-import { useCallback, useState } from "react";
-import { Image, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
 import Logo from "../../components/Logo.jsx";
 import NoteCard from "../../components/NoteCard.jsx";
 import { ErrorState, LoadingState } from "../../components/RequestStates.jsx";
@@ -17,10 +12,7 @@ import { useAppTheme } from "../../context/ThemeContext.jsx";
 import { absoluteAsset } from "../../services/api.js";
 import { listNotes } from "../../services/notes.js";
 import { radius } from "../../constants/theme.js";
-<<<<<<< HEAD
 import { ABOUT_FAQ_ITEMS } from "../../constants/faq.js";
-=======
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
 
 const QUICK_LINKS = [
   { label: "Notes", icon: "book", href: "/notes" },
@@ -30,7 +22,6 @@ const QUICK_LINKS = [
   { label: "Contact", icon: "mail", href: "/contact" },
 ];
 
-<<<<<<< HEAD
 // Mirrors client/src/pages/Home.jsx's local PLAYGROUND_LANGUAGES list — kept
 // local for the same reason the web version is: just used for a count/chips,
 // not worth wiring up a shared package for.
@@ -47,8 +38,6 @@ const HOW_IT_WORKS = [
   { n: "03", icon: "construct", title: "Build", desc: "Lean on the AI assistant and your notes to turn practice into real projects." },
 ];
 
-=======
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
 export default function Home() {
   const router = useRouter();
   const { colors } = useAppTheme();
@@ -62,11 +51,7 @@ export default function Home() {
     setStatus((current) => (current === "idle" ? "refreshing" : "loading"));
     try {
       const data = await listNotes();
-<<<<<<< HEAD
       setNotes(Array.isArray(data) ? data : []);
-=======
-      setNotes(data.slice(0, 6));
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
       setStatus("idle");
     } catch (_error) {
       setStatus("error");
@@ -75,7 +60,6 @@ export default function Home() {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-<<<<<<< HEAD
   const latestNotes = useMemo(() => notes.slice(0, 6), [notes]);
   const categoryCount = useMemo(
     () => new Set(notes.map((note) => note.category).filter(Boolean)).size,
@@ -90,8 +74,6 @@ export default function Home() {
     { icon: "sparkles", label: "AI learning assistant", value: "Built-in" },
   ];
 
-=======
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
   return (
     <Screen>
       <View style={styles.navbar}>
@@ -121,7 +103,6 @@ export default function Home() {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={status === "refreshing"} onRefresh={load} tintColor={colors.accent} />}
       >
-<<<<<<< HEAD
         {/* HERO */}
         <View style={styles.hero}>
           <Text style={styles.heroEyebrow}>
@@ -146,17 +127,6 @@ export default function Home() {
         </View>
 
         {/* QUICK LINKS */}
-=======
-        <View style={styles.hero}>
-          <Text style={styles.heroEyebrow}>BuildWithVishant</Text>
-          <Text style={styles.heroTitle}>Build. Learn. Code.</Text>
-          <Text style={styles.heroText}>
-            A developer-learning platform with structured notes, a real code playground, and an
-            AI assistant — all in your pocket.
-          </Text>
-        </View>
-
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
         <View style={styles.quickGrid}>
           {QUICK_LINKS.map((item) => (
             <TouchableOpacity key={item.label} style={styles.quickCard} onPress={() => router.push(item.href)}>
@@ -166,7 +136,6 @@ export default function Home() {
           ))}
         </View>
 
-<<<<<<< HEAD
         {/* LATEST NOTES */}
         <View>
           <View style={styles.sectionHeader}>
@@ -271,20 +240,6 @@ export default function Home() {
             <Ionicons name="arrow-forward" size={14} color={colors.accentText} />
           </TouchableOpacity>
         </View>
-=======
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Popular Notes</Text>
-          <TouchableOpacity onPress={() => router.push("/notes")}>
-            <Text style={styles.sectionLink}>See all</Text>
-          </TouchableOpacity>
-        </View>
-        {status === "loading" && <LoadingState label="Loading notes..." />}
-        {status === "error" && <ErrorState onRetry={load} />}
-        {(status === "idle" || status === "refreshing") &&
-          (notes.length ? notes.map((note) => <NoteCard key={note._id} note={note} />) : (
-            <Text style={styles.muted}>No notes published yet.</Text>
-          ))}
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
       </ScrollView>
     </Screen>
   );
@@ -299,7 +254,6 @@ const getStyles = (colors) =>
     avatar: { width: 34, height: 34, borderRadius: 17 },
     avatarFallback: { backgroundColor: colors.surfaceSolid, borderWidth: 1, borderColor: colors.border },
     avatarFallbackText: { color: colors.accent, fontWeight: "800" },
-<<<<<<< HEAD
     content: { padding: 16, paddingBottom: 40, gap: 22 },
     hero: { gap: 6 },
     heroEyebrow: { color: colors.accent, fontWeight: "800", letterSpacing: 0.5, fontSize: 12, textTransform: "uppercase" },
@@ -333,18 +287,4 @@ const getStyles = (colors) =>
     finalCtaText: { color: colors.muted, fontSize: 13, lineHeight: 19 },
     button: { backgroundColor: colors.accent, borderRadius: radius.pill, paddingHorizontal: 18, paddingVertical: 12, marginTop: 4 },
     buttonText: { color: colors.accentText, fontWeight: "800" },
-=======
-    content: { padding: 16, paddingBottom: 40, gap: 18 },
-    hero: { gap: 6 },
-    heroEyebrow: { color: colors.accent, fontWeight: "800", letterSpacing: 1, fontSize: 12, textTransform: "uppercase" },
-    heroTitle: { color: colors.text, fontSize: 30, fontWeight: "800" },
-    heroText: { color: colors.muted, fontSize: 14, lineHeight: 21 },
-    quickGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-    quickCard: { flexBasis: "31%", flexGrow: 1, backgroundColor: colors.surfaceSolid, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, paddingVertical: 16, alignItems: "center", gap: 8 },
-    quickLabel: { color: colors.text, fontSize: 12, fontWeight: "700", textAlign: "center" },
-    sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-    sectionTitle: { color: colors.text, fontSize: 17, fontWeight: "800" },
-    sectionLink: { color: colors.accent, fontSize: 13, fontWeight: "700" },
-    muted: { color: colors.muted },
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
   });

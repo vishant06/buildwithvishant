@@ -12,11 +12,7 @@ import { prepareImageForUpload } from "../utils/image.js";
 
 export default function Signup() {
   const router = useRouter();
-<<<<<<< HEAD
   const { signup } = useAuth();
-=======
-  const { signup, applySession } = useAuth();
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
 
@@ -26,10 +22,7 @@ export default function Signup() {
   const [loading, setLoading] = useState(false);
   const [oauthProvider, setOauthProvider] = useState(null);
   const [error, setError] = useState("");
-<<<<<<< HEAD
   const [signedUp, setSignedUp] = useState(false);
-=======
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
 
   const set = (key) => (value) => setForm((current) => ({ ...current, [key]: value }));
 
@@ -70,11 +63,7 @@ export default function Signup() {
     setError("");
     try {
       await signup({ name, username, email, password, avatar });
-<<<<<<< HEAD
       setSignedUp(true);
-=======
-      router.replace("/");
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
     } catch (err) {
       setError(err.message);
     } finally {
@@ -86,18 +75,11 @@ export default function Signup() {
     setOauthProvider(provider);
     setError("");
     try {
-<<<<<<< HEAD
       // Opens the OAuth browser flow. The redirect is caught by the
       // persistent root-level listener in app/_layout.jsx, which applies
       // the session and redirects home (or sends the user to /login with
       // oauthError set on failure).
       await signInWithProvider(provider);
-=======
-      const session = await signInWithProvider(provider);
-      if (!session) return; // user cancelled
-      await applySession(session.token, session.user);
-      router.replace("/");
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
     } catch (err) {
       setError(err.message);
     } finally {
@@ -105,7 +87,6 @@ export default function Signup() {
     }
   };
 
-<<<<<<< HEAD
   if (signedUp) {
     return (
       <Screen>
@@ -127,8 +108,6 @@ export default function Signup() {
     );
   }
 
-=======
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
   return (
     <Screen>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
@@ -185,10 +164,7 @@ export default function Signup() {
 const getStyles = (colors) =>
   StyleSheet.create({
     form: { padding: 24, gap: 12 },
-<<<<<<< HEAD
     confirmWrap: { flex: 1, padding: 24, gap: 14, justifyContent: "center" },
-=======
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
     title: { color: colors.text, fontSize: 26, fontWeight: "800" },
     subtitle: { color: colors.muted, marginBottom: 8 },
     oauthButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, borderWidth: 1, borderColor: colors.border, borderRadius: radius.pill, padding: 13, backgroundColor: colors.surfaceSolid },

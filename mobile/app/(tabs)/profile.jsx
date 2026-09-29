@@ -1,9 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-<<<<<<< HEAD
 import { useState } from "react";
-=======
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Screen from "../../components/Screen.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
@@ -20,7 +17,6 @@ const LINKS = [
 export default function Profile() {
   const router = useRouter();
   const { colors } = useAppTheme();
-<<<<<<< HEAD
   const { user, isAuthenticated, isAdmin, logout, resendVerification } = useAuth();
   const styles = getStyles(colors);
   const [sending, setSending] = useState(false);
@@ -38,10 +34,6 @@ export default function Profile() {
       setSending(false);
     }
   };
-=======
-  const { user, isAuthenticated, isAdmin, logout } = useAuth();
-  const styles = getStyles(colors);
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
 
   if (!isAuthenticated) {
     return (
@@ -87,7 +79,6 @@ export default function Profile() {
           <Row label="Email verified" value={user.isEmailVerified ? "Yes" : "No"} colors={colors} />
         </View>
 
-<<<<<<< HEAD
         {!user.isEmailVerified && (
           <View style={styles.verifyCard}>
             <Text style={styles.verifyText}>Verify your email address to keep your account secure.</Text>
@@ -98,8 +89,6 @@ export default function Profile() {
           </View>
         )}
 
-=======
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
         <View style={styles.linksCard}>
           {LINKS.map((item) => (
             <TouchableOpacity key={item.label} style={styles.linkRow} onPress={() => router.push(item.href)}>
@@ -146,13 +135,10 @@ const getStyles = (colors) =>
     avatarFallbackText: { color: colors.accent, fontSize: 30, fontWeight: "800" },
     name: { color: colors.text, fontSize: 18, fontWeight: "800", marginTop: 8 },
     infoCard: { backgroundColor: colors.surfaceSolid, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: 14, gap: 12 },
-<<<<<<< HEAD
     verifyCard: { backgroundColor: colors.surfaceSolid, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: 14, gap: 10 },
     verifyText: { color: colors.muted, fontSize: 13, lineHeight: 19 },
     verifyButton: { backgroundColor: colors.accent, borderRadius: radius.pill, paddingVertical: 11, alignItems: "center" },
     verifyButtonText: { color: colors.accentText, fontWeight: "800", fontSize: 13 },
-=======
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
     linksCard: { backgroundColor: colors.surfaceSolid, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, overflow: "hidden" },
     linkRow: { flexDirection: "row", alignItems: "center", gap: 10, padding: 14, borderBottomWidth: 1, borderBottomColor: colors.border },
     linkLabel: { flex: 1, color: colors.text, fontSize: 14, fontWeight: "600" },

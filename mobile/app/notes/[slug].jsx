@@ -2,10 +2,7 @@ import { useLocalSearchParams, useNavigation } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import NoteBlocks from "../../components/NoteBlocks.jsx";
-<<<<<<< HEAD
 import DownloadPdfButton from "../../components/DownloadPdfButton.jsx";
-=======
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
 import { ErrorState, LoadingState } from "../../components/RequestStates.jsx";
 import Screen from "../../components/Screen.jsx";
 import { useAppTheme } from "../../context/ThemeContext.jsx";
@@ -50,10 +47,7 @@ export default function NoteDetail() {
             ))}
           </View>
         )}
-<<<<<<< HEAD
         <DownloadPdfButton slug={note.slug} />
-=======
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
         <View style={styles.divider} />
         <NoteBlocks blocks={resolveBlocks(note)} />
       </ScrollView>

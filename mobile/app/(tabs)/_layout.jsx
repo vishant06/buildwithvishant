@@ -7,10 +7,7 @@ import { useAppTheme } from "../../context/ThemeContext.jsx";
 const ICONS = {
   index: "home",
   notes: "book",
-<<<<<<< HEAD
   projects: "briefcase",
-=======
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
   playground: "code-slash",
   ai: "sparkles",
   profile: "person",
@@ -36,10 +33,7 @@ export default function TabsLayout() {
     >
       <Tabs.Screen name="index" options={{ title: "Home", headerShown: false }} />
       <Tabs.Screen name="notes" options={{ title: "Notes" }} />
-<<<<<<< HEAD
       <Tabs.Screen name="projects" options={{ title: "Projects" }} />
-=======
->>>>>>> 92e5a8ccbe7cbf404df3af14ba462e3cefca9764
       <Tabs.Screen name="playground" options={{ title: "Playground" }} />
       <Tabs.Screen name="ai" options={{ title: "AI" }} />
       <Tabs.Screen name="profile" options={{ title: "Profile" }} />

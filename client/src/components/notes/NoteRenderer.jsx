@@ -1,50 +1,65 @@
+import { useMemo } from 'react';
 import CalloutBlock from './CalloutBlock.jsx';
 import CodeBlock from './CodeBlock.jsx';
 import DividerBlock from './DividerBlock.jsx';
 import HeadingBlock from './HeadingBlock.jsx';
 import ImageBlock from './ImageBlock.jsx';
 import ListBlock from './ListBlock.jsx';
+import { buildNoteToc } from './noteToc.js';
 import OutputBlock from './OutputBlock.jsx';
 import TableBlock from './TableBlock.jsx';
 import TextBlock from './TextBlock.jsx';
 
-// Renders a note that predates the block editor: a single `content` string
-// (with a light "## Heading" convention already in use) plus a separate
-// `codeExamples` array. Kept so those notes keep displaying correctly
-// without needing a database migration.
-const LegacyNote = ({ note }) => (
-  <div className="note-blocks">
-    {note.content && (
-      <div className="note-block-text">
-        {note.content.split('\n').map((line, index) => {
-          if (!line.trim()) return null;
-          if (line.startsWith('#### ')) {
-            return <h4 key={index}>{line.slice(5)}</h4>;
-          }
-          if (line.startsWith('### ')) {
-            return <h3 key={index}>{line.slice(4)}</h3>;
-          }
-          if (line.startsWith('## ')) {
-            return <h2 key={index}>{line.slice(3)}</h2>;
-          }
-          return <p key={index}>{line}</p>;
-        })}
-      </div>
-    )}
+const LEGACY_HEADING_TAGS = { 1: 'h1', 2: 'h2', 3: 'h3', 4: 'h4' };
 
-    {(note.codeExamples || []).map((example, index) => (
-      <CodeBlock
-        key={index}
-        language={example.language || 'javascript'}
-        content={example.code}
-        title={example.title}
-        runnable
-      />
-    ))}
-  </div>
-);
+// Note without structured `blocks`: a single `content` string using a plain
+// "## Heading" convention, plus a separate `codeExamples` array. Kept so
+// those notes keep displaying (and, now, keep their own table of contents)
+// without needing a database migration.
+const LegacyNote = ({ note }) => {
+  const toc = useMemo(() => buildNoteToc(note), [note]);
+  let headingIndex = 0;
+
+  return (
+    <div className="note-blocks">
+      {note.content && (
+        <div className="note-block-text">
+          {note.content.split('\n').map((line, index) => {
+            if (!line.trim()) return null;
+
+            const match = line.match(/^(#{1,4})\s+(.*)/);
+            if (match) {
+              const Tag = LEGACY_HEADING_TAGS[match[1].length] || 'h2';
+              const id = toc[headingIndex]?.id;
+              headingIndex += 1;
+              return (
+                <Tag key={index} id={id} className="note-block-heading">
+                  {match[2]}
+                </Tag>
+              );
+            }
+
+            return <p key={index}>{line}</p>;
+          })}
+        </div>
+      )}
+
+      {(note.codeExamples || []).map((example, index) => (
+        <CodeBlock
+          key={index}
+          language={example.language || 'javascript'}
+          content={example.code}
+          title={example.title}
+          runnable
+        />
+      ))}
+    </div>
+  );
+};
 
 export default function NoteRenderer({ note }) {
+  const toc = useMemo(() => buildNoteToc(note), [note]);
+
   if (!note) return null;
 
   const blocks = note.blocks || [];
@@ -53,20 +68,26 @@ export default function NoteRenderer({ note }) {
     return <LegacyNote note={note} />;
   }
 
+  let headingIndex = 0;
+
   return (
     <div className="note-blocks">
       {blocks.map((block, index) => {
         const key = `${block.type}-${index}`;
 
         switch (block.type) {
-          case 'heading':
+          case 'heading': {
+            const id = toc[headingIndex]?.id;
+            headingIndex += 1;
             return (
               <HeadingBlock
                 key={key}
+                id={id}
                 level={block.level}
                 content={block.content}
               />
             );
+          }
 
           case 'text':
             return <TextBlock key={key} content={block.content} />;

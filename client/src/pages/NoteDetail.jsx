@@ -4,8 +4,9 @@ import { Link, useParams } from 'react-router-dom';
 import DownloadPdfButton from '../components/DownloadPdfButton.jsx';
 import NoteRail from '../components/notes/NoteRail.jsx';
 import NoteRenderer from '../components/notes/NoteRenderer.jsx';
-import NoteSidebar from '../components/notes/NoteSidebar.jsx';
-import { categoryKey, getPrevNext, getRailNotes, groupNotesByCategory } from '../components/notes/noteNavigation.js';
+import NoteToc from '../components/notes/NoteToc.jsx';
+import { buildNoteToc } from '../components/notes/noteToc.js';
+import { getPrevNext, getRailNotes, groupNotesByCategory } from '../components/notes/noteNavigation.js';
 import useNotesIndex from '../hooks/useNotesIndex.js';
 import useReadingProgress from '../hooks/useReadingProgress.js';
 import { loadNote, peekNote } from '../services/notesCache.js';
@@ -14,7 +15,7 @@ import '../styles/notes-reader.css';
 
 export default function NoteDetail() {
   const { slug } = useParams();
-  const { notes, loading: indexLoading, error: indexError } = useNotesIndex();
+  const { notes, loading: indexLoading } = useNotesIndex();
   const [note, setNote] = useState(() => peekNote(slug));
   const [status, setStatus] = useState(() => (peekNote(slug) ? 'ready' : 'loading'));
   const [error, setError] = useState('');
@@ -115,6 +116,9 @@ export default function NoteDetail() {
     };
   }, [current]);
 
+  // Right rail only (prev/next + related/other notes across the whole
+  // library). The left column below is this note's own table of contents,
+  // not a list of other notes — see noteToc.js.
   const groups = useMemo(() => groupNotesByCategory(notes), [notes]);
 
   const listEntry = useMemo(
@@ -134,6 +138,8 @@ export default function NoteDetail() {
     [notes, subject]
   );
 
+  const toc = useMemo(() => buildNoteToc(current), [current]);
+
   const progress = useReadingProgress(articleRef, current?.slug);
 
   const closeDrawer = () => setDrawerOpen(false);
@@ -151,23 +157,22 @@ export default function NoteDetail() {
       <aside
         id="notes-topics"
         className={`notes-topics${drawerOpen ? ' is-open' : ''}`}
-        aria-label="Topics"
+        aria-label="Table of contents"
       >
         <button
           type="button"
           className="notes-drawer-close"
           onClick={closeDrawer}
-          aria-label="Close topics"
+          aria-label="Close table of contents"
         >
           <X size={18} />
         </button>
 
-        <NoteSidebar
-          groups={groups}
-          activeSlug={slug}
-          activeKey={subject ? categoryKey(subject) : null}
-          loading={indexLoading}
-          error={indexError}
+        <NoteToc
+          toc={toc}
+          noteTitle={current?.title}
+          containerRef={articleRef}
+          loading={isLoading}
           onNavigate={closeDrawer}
         />
       </aside>
@@ -183,7 +188,7 @@ export default function NoteDetail() {
               aria-expanded={drawerOpen}
               aria-controls="notes-topics"
             >
-              <Menu size={16} aria-hidden="true" /> Topics
+              <Menu size={16} aria-hidden="true" /> Contents
             </button>
 
             <nav className="notes-breadcrumb" aria-label="Breadcrumb">

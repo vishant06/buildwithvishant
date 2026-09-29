@@ -98,18 +98,18 @@
   cursor: pointer;
 }
 
-.note-topics {
+.note-toc {
   display: flex;
   flex-direction: column;
   flex: 1;
   min-height: 0;
 }
 
-.note-topics-head {
+.note-toc-head {
   padding: 16px 14px 10px;
 }
 
-.note-topics-head h2,
+.note-toc-head h2,
 .note-rail-section h2 {
   margin: 0 0 10px;
   color: var(--muted);
@@ -119,26 +119,19 @@
   text-transform: uppercase;
 }
 
-.note-topics-search {
-  position: relative;
-  display: block;
+/* Table of contents of the CURRENTLY OPEN note — not a list of other
+   notes. One flat, indented list (h1–h4 via --note-toc-indent) rather than
+   the collapsible category groups the old all-notes sidebar used. */
+
+.note-toc-subject {
+  margin: -4px 0 2px;
+  color: var(--text);
+  font-size: 0.86rem;
+  font-weight: 700;
+  line-height: 1.35;
 }
 
-.note-topics-search svg {
-  position: absolute;
-  top: 50%;
-  left: 11px;
-  transform: translateY(-50%);
-  color: var(--muted);
-  pointer-events: none;
-}
-
-.note-topics-search input {
-  padding: 9px 10px 9px 32px;
-  font-size: 0.88rem;
-}
-
-.note-topics-list {
+.note-toc-list {
   flex: 1;
   min-height: 0;
   position: relative;
@@ -148,66 +141,35 @@
   scrollbar-color: var(--border) transparent;
 }
 
-.note-topic-group + .note-topic-group {
-  margin-top: 2px;
-}
-
-.note-topic-group-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  padding: 8px 8px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-  font-size: 0.84rem;
-  font-weight: 700;
-  text-align: left;
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-
-.note-topic-group-toggle:hover {
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
-}
-
-.note-topic-group-toggle svg {
-  flex: none;
-  color: var(--muted);
-  transition: transform 0.15s ease;
-}
-
-.note-topic-group-toggle svg.is-open {
-  transform: rotate(90deg);
-}
-
-.note-topic-group-toggle span {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.note-topic-group-toggle small {
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-weight: 600;
-}
-
-.note-topic-group ul {
-  margin: 2px 0 8px 15px;
-  padding: 0 0 0 8px;
+.note-toc-list ul {
+  margin: 0;
+  padding: 0;
   list-style: none;
-  border-left: 1px solid var(--border);
 }
 
-.note-topic-link {
+.note-toc-item {
+  --note-toc-indent: 0;
+}
+
+.note-toc-item.note-toc-level-1 {
+  --note-toc-indent: 0;
+}
+
+.note-toc-item.note-toc-level-2 {
+  --note-toc-indent: 0;
+}
+
+.note-toc-item.note-toc-level-3 {
+  --note-toc-indent: 1;
+}
+
+.note-toc-item.note-toc-level-4 {
+  --note-toc-indent: 2;
+}
+
+.note-toc-link {
   display: block;
-  padding: 7px 10px;
+  padding: 7px 10px 7px calc(10px + var(--note-toc-indent) * 14px);
   border-radius: 6px;
   color: var(--muted);
   font-size: 0.87rem;
@@ -215,15 +177,25 @@
   transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.note-topic-link:hover {
+.note-toc-item.note-toc-level-1 .note-toc-link,
+.note-toc-item.note-toc-level-2 .note-toc-link {
+  font-weight: 600;
+}
+
+.note-toc-item.note-toc-level-3 .note-toc-link,
+.note-toc-item.note-toc-level-4 .note-toc-link {
+  font-size: 0.83rem;
+}
+
+.note-toc-link:hover {
   background: color-mix(in srgb, var(--accent) 8%, transparent);
   color: var(--text);
 }
 
-.note-topic-link.is-active {
+.note-toc-link.is-active {
   background: color-mix(in srgb, var(--accent) 14%, transparent);
   color: var(--text);
-  font-weight: 600;
+  font-weight: 700;
   box-shadow: inset 2px 0 0 var(--accent);
 }
 

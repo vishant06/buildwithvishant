@@ -12,7 +12,7 @@ const ResizeHandle = ({ orientation, isDragging, ...handleProps }) => (
       (orientation === 'vertical' ? 'resize-handle-vertical' : 'resize-handle-horizontal') +
       (isDragging ? ' dragging' : '')
     }
-    aria-label={orientation === 'vertical' ? 'Resize editor and preview' : 'Resize editor and console'}
+    aria-label={orientation === 'vertical' ? 'Resize editor and output panel' : 'Resize output and input panels'}
     {...handleProps}
   >
     <span className="resize-handle-grip" aria-hidden="true" />

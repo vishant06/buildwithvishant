@@ -9,7 +9,7 @@
 
 .nav {
     width: min(1180px, calc(100% - 32px));
-    min-height: 72px;
+    min-height: 54px;
     margin: 0 auto;
     display: grid;
     grid-template-columns: 1fr auto 1fr;
@@ -18,8 +18,8 @@
 }
 
 .logo img{
-    width: 44px;
-    height: 44px;
+    width: 34px;
+    height: 34px;
     display: grid;
     place-items: center;
     border-radius: 100px;
@@ -63,7 +63,7 @@
     border: 1px solid var(--border);
     background: var(--surface);
     color: var(--text);
-    min-height: 40px;
+    min-height: 34px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -72,7 +72,7 @@
 
 .themeButton,
 .menuButton {
-    width: 40px;
+    width: 34px;
 }
 
 .authLinks {
@@ -82,7 +82,7 @@
 }
 
 .authLinks .signup {
-    padding: 10px 13px;
+    padding: 7px 12px;
     border-radius: 9px;
     background: var(--accent);
     color: #03121f;
@@ -98,8 +98,8 @@
 }
 
 .profileButton span {
-    width: 30px;
-    height: 30px;
+    width: 26px;
+    height: 26px;
     border-radius: 7px;
     display: grid;
     place-items: center;
@@ -167,6 +167,11 @@
     display: none;
 }
 
+/* Search button (from shared/search) sits with the other utilities. */
+.utilities :global(.bwv-search-btn) {
+    height: 34px;
+}
+
 @media (max-width: 780px) {
     .nav {
         grid-template-columns: 1fr auto;
@@ -181,7 +186,7 @@
         position: absolute;
         left: 16px;
         right: 16px;
-        top: 71px;
+        top: 53px;
         padding: 13px;
         flex-direction: column;
         align-items: stretch;

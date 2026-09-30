@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import PasswordField from '../components/PasswordField.jsx';
+import { finishPostLogin, peekPostLoginRedirect, rememberPostLoginRedirect } from '@shared/auth/sso.js';
 import { useAuth } from '../context/AuthContext.jsx';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -20,6 +21,26 @@ export default function Auth({ signup = false }) {
     if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
   }, []);
 
+  // Playground / AI send people here as /login?redirect=<their url>. Only
+  // allow-listed app origins are remembered (see rememberPostLoginRedirect).
+  useEffect(() => {
+    const redirect = new URLSearchParams(window.location.search).get('redirect');
+    if (redirect) rememberPostLoginRedirect(redirect);
+  }, []);
+
+  // Already signed in and arrived from another app: hand the session over.
+  const handingOff = isAuthenticated && !signedUp && Boolean(peekPostLoginRedirect());
+  useEffect(() => {
+    if (handingOff) finishPostLogin();
+  }, [handingOff]);
+
+  if (handingOff) {
+    return (
+      <section className="auth-page">
+        <div className="panel auth-card"><h1>Signing you in…</h1><p>Taking you back to where you were.</p></div>
+      </section>
+    );
+  }
   if (isAuthenticated && !signedUp) return <Navigate to="/" replace />;
 
   const updateAvatar = (event) => {
@@ -47,7 +68,7 @@ export default function Auth({ signup = false }) {
         setSignedUp(true);
       } else {
         await login(form.email, form.password, form.loginAs);
-        navigate('/');
+        if (!peekPostLoginRedirect()) navigate('/');
       }
     } catch (err) { setError(err.message); } finally { setLoading(false); }
   };
@@ -65,7 +86,7 @@ export default function Auth({ signup = false }) {
             link to <strong>{form.email}</strong> — verifying it helps keep your account secure.
           </p>
           <div className="actions">
-            <button className="btn primary" onClick={() => navigate('/')}>Continue to the site</button>
+            <button className="btn primary" onClick={() => { if (!finishPostLogin()) navigate('/'); }}>Continue to the site</button>
             <button className="btn ghost" onClick={() => navigate('/profile')}>Go to profile</button>
           </div>
         </div>

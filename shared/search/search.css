@@ -1,0 +1,142 @@
+/* Command-palette search + navbar button. Uses the shared design tokens
+   (--bg, --surface-solid, --text, --muted, --border, --accent) so it follows
+   whichever theme the app is in. */
+.bwv-search-btn {
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.bwv-search-btn:hover { color: var(--text); border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
+.bwv-search-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.bwv-search-btn kbd,
+.bwv-search-dialog kbd {
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  line-height: 1.2;
+}
+
+.bwv-search-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 12vh 12px 12px;
+  background: rgba(2, 6, 23, 0.55);
+  backdrop-filter: blur(4px);
+  animation: bwv-fade 0.12s ease-out;
+}
+.bwv-search-dialog {
+  width: min(640px, 100%);
+  max-height: min(560px, 76vh);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-solid);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  animation: bwv-pop 0.14s ease-out;
+}
+.bwv-search-input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+}
+.bwv-search-input-row input {
+  flex: 1;
+  min-width: 0;
+  height: 52px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 1rem;
+}
+.bwv-search-input-row input::placeholder { color: var(--muted); }
+.bwv-search-list { flex: 1; overflow-y: auto; padding: 6px; overscroll-behavior: contain; }
+.bwv-search-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 8px 4px;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.bwv-search-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.92rem;
+  text-align: left;
+  cursor: pointer;
+}
+.bwv-search-item[data-active='true'] { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.bwv-search-item svg { flex: none; color: var(--muted); }
+.bwv-search-item[data-active='true'] svg { color: var(--accent); }
+.bwv-search-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.bwv-search-hint { max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 0.8rem; }
+.bwv-search-empty,
+.bwv-search-note { margin: 0; padding: 14px 10px; color: var(--muted); font-size: 0.9rem; }
+.bwv-search-empty { text-align: center; padding: 26px 10px; }
+.bwv-search-footer {
+  display: flex;
+  gap: 16px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+.bwv-search-footer span { display: inline-flex; align-items: center; gap: 4px; }
+.bwv-spin { animation: bwv-rotate 0.8s linear infinite; }
+
+@keyframes bwv-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes bwv-pop { from { opacity: 0; transform: translateY(-6px) scale(0.985); } to { opacity: 1; transform: none; } }
+@keyframes bwv-rotate { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .bwv-search-overlay, .bwv-search-dialog, .bwv-spin { animation: none; }
+}
+
+@media (max-width: 900px) {
+  .bwv-search-btn kbd { display: none; }
+}
+@media (max-width: 720px) {
+  .bwv-search-btn { width: 34px; justify-content: center; padding: 0; }
+  .bwv-search-btn-text { display: none; }
+  .bwv-search-overlay { padding-top: 8vh; }
+  .bwv-search-footer { display: none; }
+  .bwv-search-hint { display: none; }
+}

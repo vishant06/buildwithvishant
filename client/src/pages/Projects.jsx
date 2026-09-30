@@ -16,6 +16,17 @@ const Projects = () => {
       .finally(() => setLoading(false));
   }, []);
 
+  // Search results link to /projects#<id>; scroll to (and flash) that card once loaded.
+  useEffect(() => {
+    if (loading || !window.location.hash) return;
+    const card = document.getElementById(decodeURIComponent(window.location.hash.slice(1)));
+    if (!card) return;
+    card.scrollIntoView({ block: 'center' });
+    card.classList.add('search-hit');
+    const timer = setTimeout(() => card.classList.remove('search-hit'), 2200);
+    return () => clearTimeout(timer);
+  }, [loading, projects]);
+
   return (
     <section>
       <SectionHeader eyebrow="Projects" title="Projects I've worked on">
@@ -26,7 +37,7 @@ const Projects = () => {
       {!loading && !error && projects.length === 0 && <p className="notice">No projects added yet. Add one from the admin dashboard.</p>}
       <div className="project-grid">
         {projects.map((project) => (
-          <article className="project-card" key={project._id}>
+          <article className="project-card" id={project._id} key={project._id}>
             {project.featured && <span className="badge">Featured</span>}
             <img src={absoluteAsset(project.image) || '/profile-placeholder.svg'} alt={project.title} />
             <div>

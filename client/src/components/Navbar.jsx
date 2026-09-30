@@ -9,18 +9,23 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
+import { appHref } from "@shared/auth/sso.js";
+import { AI_URL, PLAYGROUND_URL } from "@shared/config/urls.js";
+import { SearchButton } from "@shared/search/SearchProvider.jsx";
 import { useTheme } from "../context/ThemeContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { absoluteAsset } from "../services/api.js";
 import styles from "./Navbar.module.css";
 
+// Playground and AI are separate apps: those entries are plain links to
+// their own URL (built from env vars), everything else is a router link.
 const links = [
-  ["Home", "/"],
-  ["Notes", "/notes"],
-  ["Projects", "/projects"],
-  ["Playground", "/playground"],
-  ["AI", "/ai"],
-  // ["Education", "/education"],
+  { label: "Home", to: "/" },
+  { label: "Notes", to: "/notes" },
+  { label: "Projects", to: "/projects" },
+  { label: "Playground", app: PLAYGROUND_URL },
+  { label: "AI", app: AI_URL },
+  // { label: "Education", to: "/education" },
 ];
 
 export default function Navbar() {
@@ -75,21 +80,29 @@ export default function Navbar() {
             menuOpen ? styles.open : ""
           }`}
         >
-          {links.map(([label, path]) => (
-            <NavLink
-              key={label}
-              to={path}
-              onClick={closeMenu}
-              className={({ isActive }) =>
-                isActive ? styles.active : ""
-              }
-            >
-              {label}
-            </NavLink>
-          ))}
+          {links.map((link) =>
+            link.app ? (
+              <a key={link.label} href={appHref(link.app)} onClick={closeMenu}>
+                {link.label}
+              </a>
+            ) : (
+              <NavLink
+                key={link.label}
+                to={link.to}
+                onClick={closeMenu}
+                className={({ isActive }) =>
+                  isActive ? styles.active : ""
+                }
+              >
+                {link.label}
+              </NavLink>
+            ),
+          )}
         </div>
 
         <div className={styles.utilities}>
+          <SearchButton />
+
           <button
             className={styles.themeButton}
             onClick={toggleTheme}
@@ -150,12 +163,12 @@ export default function Navbar() {
                     Profile
                   </NavLink>
 
-                  <NavLink
-                    to="/playground"
+                  <a
+                    href={appHref(PLAYGROUND_URL)}
                     onClick={() => setProfileOpen(false)}
                   >
                     My Playground
-                  </NavLink>
+                  </a>
 
                   {user.role === "admin" && (
                     <NavLink

@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import { uploadUserAvatar } from '../services/cloudinaryService.js';
 import { sendVerificationEmail } from '../services/emailService.js';
+import { isAllowedOrigin, normalizeOrigin } from '../config/allowedOrigins.js';
 
 const signToken = (id) =>
   jwt.sign({
@@ -418,4 +419,53 @@ export const me = async (req, res) => {
   res.json({
     user: publicUser(req.user)
   });
+};
+
+// --- Cross-app single sign-on (main site -> Playground / AI) -------------
+// localStorage is per-origin, so a login on buildwithvishant.in is invisible
+// to code.buildwithvishant.in. Instead of sharing the long-lived JWT (or
+// putting it in a URL) the already-signed-in main site asks for a one-time
+// code bound to the target app's origin. The target app swaps that code for
+// a normal JWT over a CORS-checked POST. Codes live for 60 seconds, work
+// once, and only ever appear in a URL briefly (the app strips it at once).
+const SSO_CODE_TTL_MS = 60 * 1000;
+const ssoCodes = new Map(); // sha256(code) -> { userId, target, expires }
+
+const hashCode = (code) => crypto.createHash('sha256').update(code).digest('hex');
+const sweepSsoCodes = () => {
+  const now = Date.now();
+  for (const [key, record] of ssoCodes) if (record.expires <= now) ssoCodes.delete(key);
+};
+
+// POST /api/auth/sso/code  (protected) body: { target: "<app origin>" }
+export const issueSsoCode = (req, res) => {
+  const target = normalizeOrigin(req.body?.target);
+  if (!target || !isAllowedOrigin(target)) return res.status(400).json({ message: 'Unknown sign-in target' });
+
+  sweepSsoCodes();
+  const code = crypto.randomBytes(32).toString('hex');
+  ssoCodes.set(hashCode(code), { userId: String(req.user._id), target, expires: Date.now() + SSO_CODE_TTL_MS });
+  res.json({ code, expiresIn: SSO_CODE_TTL_MS / 1000 });
+};
+
+// POST /api/auth/sso/exchange  body: { code }
+// The code is deleted before it is checked, so a failed attempt can never
+// be retried. It is only honoured for the origin it was issued to.
+export const exchangeSsoCode = async (req, res) => {
+  const code = String(req.body?.code || '');
+  if (!/^[a-f0-9]{64}$/.test(code)) return res.status(400).json({ message: 'Invalid sign-in code' });
+
+  const key = hashCode(code);
+  const record = ssoCodes.get(key);
+  ssoCodes.delete(key);
+
+  const origin = normalizeOrigin(req.headers.origin);
+  if (!record || record.expires <= Date.now() || !origin || origin !== record.target) {
+    return res.status(401).json({ message: 'Sign-in code is invalid or has expired' });
+  }
+
+  const user = await User.findById(record.userId).select('-password');
+  if (!user) return res.status(401).json({ message: 'User account not found' });
+
+  res.json({ token: signToken(user._id), user: publicUser(user) });
 };

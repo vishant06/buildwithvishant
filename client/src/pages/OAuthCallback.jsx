@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
+import { finishPostLogin, peekPostLoginRedirect } from '@shared/auth/sso.js';
 import { useAuth } from '../context/AuthContext.jsx';
 
 export default function OAuthCallback() {
@@ -17,6 +18,8 @@ export default function OAuthCallback() {
       if (!token || !rawUser) throw new Error('Sign-in could not be completed. Please try again.');
       completeOAuth(token, JSON.parse(rawUser));
       window.history.replaceState({}, document.title, '/auth/callback');
+      // Signed in from Playground/AI? Send the user (and their session) back there.
+      if (peekPostLoginRedirect() && finishPostLogin()) return;
       setDone(true);
     } catch (err) { setError(err.message); }
   }, [completeOAuth]);

@@ -16,6 +16,8 @@ import noteRoutes from './routes/noteRoutes.js';
 import playgroundRoutes from './routes/playgroundRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
+import searchRoutes from './routes/searchRoutes.js';
+import { allowedOrigins, isAllowedOrigin } from './config/allowedOrigins.js';
 
 
 dns.setServers(["8.8.8.8", "8.8.4.4"]);
@@ -38,7 +40,13 @@ User.updateMany(
 ).catch((error) => console.error('OAuth email-verification backfill failed:', error));
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
-app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:5173', credentials: true }));
+// Explicit allowlist (main site, Playground, AI, localhost in development).
+// Requests with no Origin header (mobile app, curl, server-to-server) are
+// not browser cross-origin requests and are let through as before.
+app.use(cors({
+  origin: (origin, callback) => callback(null, !origin || isAllowedOrigin(origin)),
+  credentials: true
+}));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
@@ -64,6 +72,7 @@ app.use('/api/notes', noteRoutes);
 app.use('/api/playground', playgroundRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/search', searchRoutes);
 
 
 app.use((req, res) => {
@@ -82,5 +91,8 @@ app.use((err, _req, res, _next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`API running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`API running on port ${PORT}`);
+  console.log(`CORS allowlist: ${[...allowedOrigins].join(', ')}`);
+});
 // console.log(process.env.MONGO_URI);

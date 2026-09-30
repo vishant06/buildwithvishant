@@ -1886,3 +1886,10 @@ body:has(.playground-shell.fit-to-screen) {
 .dark-theme .profile-dark {
   display: block;
 }
+
+/* Project card highlighted after opening it from global search */
+.project-card.search-hit {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  transition: outline-color 0.4s;
+}

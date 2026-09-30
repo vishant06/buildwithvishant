@@ -1,9 +1,9 @@
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
+import { sharedResolve, sharedServer } from '../shared/vite/config.js';
 
 export default defineConfig({
   plugins: [react()],
-  server: {
-    port: 5173
-  }
+  resolve: sharedResolve,
+  server: sharedServer(5173),
 });

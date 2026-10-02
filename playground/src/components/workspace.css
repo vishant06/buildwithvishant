@@ -1,0 +1,90 @@
+/* File explorer, editor tabs, modals, context menu and quick-open. */
+
+/* ---- explorer */
+.ws-explorer { flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--panel); border-right: 1px solid var(--border); }
+.ws-explorer-head { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 4px; padding: 6px 6px 6px 12px; border-bottom: 1px solid var(--border); background: var(--panel-raised); min-height: 36px; }
+.ws-explorer-title { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.ws-explorer-actions { display: flex; align-items: center; }
+.ws-project { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; padding: 8px 12px; border: 0; border-bottom: 1px solid var(--border); background: transparent; color: var(--text); text-align: left; }
+.ws-project:hover { background: color-mix(in srgb, var(--text) 5%, transparent); }
+.ws-project-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.82rem; font-weight: 700; }
+.ws-project-lang { flex: none; padding: 1px 7px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); font-size: 0.64rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+.ws-tree { flex: 1; min-height: 0; overflow: auto; padding: 4px 0 12px; outline: none; }
+.ws-tree.drop-root { box-shadow: inset 0 0 0 1px var(--accent); }
+.ws-tree:focus-visible { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 60%, transparent); }
+.ws-row { display: flex; align-items: center; gap: 5px; height: 28px; padding-right: 8px; color: var(--text); font-size: 0.83rem; cursor: pointer; user-select: none; white-space: nowrap; }
+.ws-row:hover { background: color-mix(in srgb, var(--text) 6%, transparent); }
+.ws-row.active { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.ws-row.selected { box-shadow: inset 2px 0 0 var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.ws-row.drop { background: color-mix(in srgb, var(--accent) 24%, transparent); outline: 1px dashed var(--accent); outline-offset: -1px; }
+.ws-row.dragging { opacity: 0.45; }
+.ws-chevron { flex: none; width: 14px; display: inline-grid; place-items: center; color: var(--muted); }
+.ws-icon { flex: none; color: var(--muted); }
+.ws-icon.folder { color: var(--warn); }
+.ws-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.ws-badge { flex: none; padding: 0 6px; border-radius: 999px; background: color-mix(in srgb, var(--success) 18%, transparent); color: var(--success); font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+.ws-dirty-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--warn); }
+.ws-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 16px; color: var(--muted); font-size: 0.84rem; text-align: center; }
+.ws-empty p { margin: 0; }
+.ws-explorer-foot { flex: none; display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; border-top: 1px solid var(--border); }
+.ws-explorer-foot .pg-btn { flex: 1 1 110px; min-width: 0; justify-content: center; }
+
+/* ---- tabs */
+.ws-tabs { flex: none; display: flex; overflow-x: auto; border-bottom: 1px solid var(--border); background: var(--panel-raised); min-height: 34px; scrollbar-width: thin; }
+.ws-tabs.empty { min-height: 34px; }
+.ws-tab { flex: none; display: inline-flex; align-items: center; gap: 7px; max-width: 220px; height: 34px; padding: 0 6px 0 12px; border-right: 1px solid var(--border); border-bottom: 2px solid transparent; color: var(--muted); font-size: 0.8rem; font-weight: 600; cursor: pointer; user-select: none; }
+.ws-tab:hover { color: var(--text); }
+.ws-tab.active { color: var(--text); background: var(--panel); border-bottom-color: var(--accent); }
+.ws-tab-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ws-entry-dot { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+.ws-tab-close { position: relative; flex: none; width: 20px; height: 20px; display: inline-grid; place-items: center; border: 0; border-radius: 5px; background: transparent; color: var(--muted); opacity: 0.6; }
+.ws-tab:hover .ws-tab-close, .ws-tab.active .ws-tab-close, .ws-tab-close.dirty { opacity: 1; }
+.ws-tab-close:hover { background: color-mix(in srgb, var(--text) 12%, transparent); color: var(--text); }
+/* An unsaved tab shows a dot that turns into the close icon on hover. */
+.ws-tab-close.dirty .ws-dirty-dot { position: absolute; }
+.ws-tab-close.dirty svg { opacity: 0; }
+.ws-tab-close.dirty:hover svg, .ws-tab-close.dirty:focus-visible svg { opacity: 1; }
+.ws-tab-close.dirty:hover .ws-dirty-dot, .ws-tab-close.dirty:focus-visible .ws-dirty-dot { display: none; }
+
+.ws-banner { flex: none; display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-bottom: 1px solid color-mix(in srgb, var(--warn) 45%, transparent); background: color-mix(in srgb, var(--warn) 12%, transparent); color: var(--warn); font-size: 0.8rem; font-weight: 600; }
+.ws-banner svg { flex: none; }
+.ws-nofile { gap: 8px; }
+
+/* ---- modals */
+.ws-overlay { position: fixed; inset: 0; z-index: 900; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(2, 6, 23, 0.55); backdrop-filter: blur(3px); }
+.ws-overlay.top { align-items: flex-start; padding-top: 12vh; }
+.ws-modal { width: min(440px, 100%); border: 1px solid var(--border); border-radius: 14px; background: var(--surface-solid); color: var(--text); box-shadow: var(--shadow); }
+.ws-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+.ws-modal-head strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.95rem; }
+.ws-modal-body { display: flex; flex-direction: column; gap: 10px; padding: 14px; }
+.ws-modal-body label { display: flex; flex-direction: column; gap: 6px; color: var(--muted); font-size: 0.78rem; font-weight: 600; }
+.ws-modal-body input, .ws-modal-body select { height: 38px; padding: 0 10px; border: 1px solid var(--border); border-radius: 9px; background: var(--panel-raised); color: var(--text); font-size: 0.92rem; }
+.ws-modal-body input:focus, .ws-modal-body select:focus { outline: 2px solid var(--accent); outline-offset: 0; }
+.ws-modal-body input[aria-invalid='true'] { border-color: var(--danger); outline-color: var(--danger); }
+.ws-error { margin: 0; color: var(--danger); font-size: 0.8rem; }
+.ws-tip { margin: 0; color: var(--muted); font-size: 0.78rem; }
+.ws-message { margin: 0; color: var(--text); font-size: 0.9rem; line-height: 1.5; }
+.ws-modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+
+/* ---- context menu */
+.ws-menu { position: fixed; z-index: 950; min-width: 210px; padding: 5px; display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-solid); box-shadow: var(--shadow); }
+.ws-menu button { display: flex; align-items: center; gap: 9px; width: 100%; padding: 7px 10px; border: 0; border-radius: 7px; background: transparent; color: var(--text); font-size: 0.84rem; text-align: left; }
+.ws-menu button svg { flex: none; color: var(--muted); }
+.ws-menu button span { flex: 1; }
+.ws-menu button:hover:not(:disabled), .ws-menu button:focus-visible { background: color-mix(in srgb, var(--accent) 16%, transparent); outline: none; }
+.ws-menu button:disabled { opacity: 0.45; cursor: default; }
+.ws-menu button.danger, .ws-menu button.danger svg { color: var(--danger); }
+.ws-menu kbd { color: var(--muted); font: inherit; font-size: 0.7rem; }
+.ws-menu hr { width: 100%; margin: 4px 0; border: 0; border-top: 1px solid var(--border); }
+
+/* ---- quick open */
+.ws-quick { width: min(600px, 100%); max-height: min(480px, 70vh); display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-solid); color: var(--text); box-shadow: var(--shadow); }
+.ws-quick-input { display: flex; align-items: center; gap: 10px; padding: 0 14px; border-bottom: 1px solid var(--border); color: var(--muted); }
+.ws-quick-input input { flex: 1; min-width: 0; height: 48px; border: 0; outline: 0; background: transparent; color: var(--text); font-size: 0.98rem; }
+.ws-quick-list { flex: 1; overflow-y: auto; padding: 6px; }
+.ws-quick-list button { width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--text); text-align: left; font-size: 0.88rem; }
+.ws-quick-list button.active { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.ws-quick-list button svg { flex: none; color: var(--muted); }
+.ws-quick-list .label { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.ws-quick-list .hint { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 0.78rem; text-align: right; }
+.ws-quick-empty { margin: 0; padding: 18px 10px; color: var(--muted); text-align: center; font-size: 0.88rem; }

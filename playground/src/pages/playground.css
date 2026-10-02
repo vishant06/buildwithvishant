@@ -75,6 +75,7 @@
 .pg-btn:hover:not(:disabled) { color: var(--text); background: color-mix(in srgb, var(--text) 7%, transparent); }
 .pg-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .pg-btn.icon { width: 30px; padding: 0; justify-content: center; border-color: transparent; }
+.pg-btn.icon.on { color: var(--accent); }
 .pg-run {
   border-color: transparent;
   background: #fbbf24;
@@ -85,6 +86,7 @@
 .pg-run:hover:not(:disabled) { background: #f59e0b; }
 .pg-run:disabled { opacity: 0.7; cursor: progress; }
 .pg-run.small { height: 28px; padding: 0 10px; }
+.pg-run.danger { background: var(--danger); color: #fff; }
 .pg-select {
   height: 30px;
   max-width: 150px;
@@ -122,9 +124,12 @@
 .pg-body.resizing-y { cursor: row-resize; }
 .pg-body .resize-handle { pointer-events: auto; }
 
+.pg-work { position: relative; flex: 1 1 62%; min-width: 0; min-height: 0; display: flex; flex-direction: row; }
 .pg-editor, .pg-output { min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
-.pg-editor { flex: 1 1 62%; background: var(--panel); }
+.pg-editor { flex: 1 1 auto; background: var(--panel); }
 .pg-output { flex: 1 1 38%; background: var(--panel); }
+.pg-explorer-pane { flex: 0 0 26%; min-width: 0; min-height: 0; display: flex; }
+.pg-scrim { display: none; }
 
 .pg-tabs { flex: none; display: flex; gap: 2px; padding: 0 6px; border-bottom: 1px solid var(--border); background: var(--panel-raised); }
 .pg-tabs button {
@@ -180,6 +185,8 @@
 .pg-stdin textarea {
   flex: 1;
   min-height: 0;
+  width: calc(100% - 24px);
+  min-width: 0;
   margin: 0 12px 12px;
   padding: 10px;
   resize: none;
@@ -227,6 +234,7 @@
 /* Saved-projects drawer */
 .pg-drawer { position: absolute; z-index: 20; left: 0; top: 0; bottom: 0; width: min(300px, 92%); display: flex; flex-direction: column; border-right: 1px solid var(--border); background: var(--surface-solid); box-shadow: var(--shadow); }
 .pg-drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+.pg-drawer-head span { display: inline-flex; align-items: center; gap: 6px; }
 .pg-drawer ul { margin: 0; padding: 6px; list-style: none; overflow-y: auto; }
 .pg-drawer li { display: flex; align-items: center; gap: 4px; border-radius: 8px; }
 .pg-drawer li.current { background: color-mix(in srgb, var(--accent) 14%, transparent); }
@@ -249,6 +257,7 @@
 .pg-status { flex: none; height: 26px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 10px; border-top: 1px solid var(--border); background: var(--panel); color: var(--muted); font-size: 0.72rem; }
 .pg-ready { display: inline-flex; align-items: center; gap: 7px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-weight: 600; }
 .pg-status-right { display: inline-flex; align-items: center; gap: 6px; flex: none; }
+.pg-chip.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 50%, transparent); }
 .pg-chip { display: inline-flex; align-items: center; gap: 4px; height: 18px; padding: 0 7px; border: 1px solid var(--border); border-radius: 999px; }
 
 /* Toolbar collapses to icons on medium widths */
@@ -267,9 +276,11 @@
   .pg-rail { width: 100%; height: 48px; flex-direction: row; justify-content: flex-start; gap: 8px; padding: 6px 10px; overflow-x: auto; overflow-y: hidden; border-right: 0; border-bottom: 1px solid var(--border); }
   .pg-rail-spacer { display: none; }
   .pg-body { flex-direction: column; }
-  .pg-editor { flex: 1 1 55%; min-height: 200px; }
+  .pg-work { flex: 1 1 55%; min-height: 200px; }
   .pg-output { flex: 1 1 45%; min-height: 180px; }
-  .pg-body > .resize-handle { display: none; }
+  .pg-explorer-pane { position: absolute; z-index: 30; top: 0; bottom: 0; left: 0; width: min(300px, 86%); flex: none; box-shadow: var(--shadow); }
+  .pg-scrim { position: absolute; z-index: 25; inset: 0; display: block; border: 0; background: rgba(2, 6, 23, 0.5); }
+  .pg-body > .resize-handle, .pg-work > .resize-handle { display: none; }
   .pg-output-stack .resize-handle { display: none; }
   .pg-status-right .pg-chip:nth-child(3) { display: none; }
 }

@@ -5,6 +5,7 @@ import {
 } from '../middleware/authMiddleware.js';
 import {
     create,
+    getOne,
     mine,
     remove,
     update
@@ -22,6 +23,7 @@ router.post('/execute', rateLimit({
 }), execute);
 router.use(protect);
 router.get('/my', mine);
+router.get('/:id', getOne);
 router.post('/', create);
 router.put('/:id', update);
 router.delete('/:id', remove);

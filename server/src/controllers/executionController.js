@@ -1,13 +1,12 @@
-import {
-  executionLanguages
-} from '../config/playgroundLanguages.js';
+import { executionLanguages } from '../config/playgroundLanguages.js';
+import { buildProjectRequest } from '../utils/executionPayload.js';
+import { WorkspaceError } from '../utils/workspaceCore.js';
 
 const MAX_CODE_LENGTH = 100_000;
 const MAX_INPUT_LENGTH = 20_000;
 
 export const execute = async (req, res) => {
   const language = String(req.body.language || '');
-  const code = String(req.body.code || '');
   const stdin = String(req.body.stdin || '');
 
   const config = executionLanguages[language];
@@ -18,14 +17,47 @@ export const execute = async (req, res) => {
     });
   }
 
-  if (
-    !code.trim() ||
-    code.length > MAX_CODE_LENGTH ||
-    stdin.length > MAX_INPUT_LENGTH
-  ) {
+  if (stdin.length > MAX_INPUT_LENGTH) {
     return res.status(400).json({
       message: 'Code or standard input is too large.'
     });
+  }
+
+  // Two request shapes:
+  //  - project:  { language, files: [{ path, content }], entryFile?, stdin }
+  //  - classic:  { language, code, stdin }  (older clients and the mobile app)
+  let files;
+  let extra = {};
+  let entry = config.filename;
+
+  if (Array.isArray(req.body.files)) {
+    try {
+      const project = buildProjectRequest(config, language, req.body);
+      files = project.payload.files;
+      entry = project.entry;
+      extra = Object.fromEntries(
+        Object.entries(project.payload).filter(([key]) => key !== 'files')
+      );
+    } catch (error) {
+      if (error instanceof WorkspaceError) {
+        return res.status(422).json({
+          message: error.message,
+          errors: error.details || undefined
+        });
+      }
+      console.error('Project payload error:', error);
+      return res.status(400).json({ message: 'The project could not be read.' });
+    }
+  } else {
+    const code = String(req.body.code || '');
+
+    if (!code.trim() || code.length > MAX_CODE_LENGTH) {
+      return res.status(400).json({
+        message: 'Code or standard input is too large.'
+      });
+    }
+
+    files = [{ name: config.filename, content: code }];
   }
 
   const baseUrl = (process.env.PISTON_URL || '').replace(/\/$/, '');
@@ -60,12 +92,9 @@ export const execute = async (req, res) => {
         language: config.runtime,
         version: '*',
 
-        files: [
-          {
-            name: config.filename,
-            content: code
-          }
-        ],
+        files,
+
+        ...extra,
 
         stdin,
 
@@ -130,7 +159,9 @@ export const execute = async (req, res) => {
 
       memory: result.memory ?? null,
 
-      message: result.message || ''
+      message: result.message || '',
+
+      entry
     });
 
   } catch (error) {

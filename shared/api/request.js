@@ -15,7 +15,12 @@ const request = async (path, options = {}) => {
   });
 
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.message || 'Request failed');
+  if (!response.ok) {
+    const error = new Error(data.message || 'Request failed');
+    error.status = response.status; // lets callers react to e.g. 409 conflicts
+    error.data = data;
+    throw error;
+  }
   return data;
 };
 

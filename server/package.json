@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "seed:admin": "node src/seedAdmin.js"
+    "seed:admin": "node src/seedAdmin.js",
+    "sync:workspace": "node -e \"require('fs').copyFileSync('../shared/workspace/core.js','src/utils/workspaceCore.js')\"",
+    "check:workspace": "node -e \"const f=require('fs');if(f.readFileSync('../shared/workspace/core.js','utf8')!==f.readFileSync('src/utils/workspaceCore.js','utf8')){console.error('workspaceCore.js is out of sync: run npm run sync:workspace');process.exit(1)}\""
   },
   "dependencies": {
     "axios": "^1.20.0",
@@ -24,7 +26,8 @@
     "multer": "^2.0.1",
     "nodemailer": "^6.9.16",
     "pdfkit": "^0.15.0",
-    "streamifier": "^0.1.1"
+    "streamifier": "^0.1.1",
+    "vishant-mern-portfolio": "file:.."
   },
   "devDependencies": {
     "nodemon": "^3.1.9"

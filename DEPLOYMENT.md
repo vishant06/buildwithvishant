@@ -118,3 +118,93 @@ others (localStorage and OS preference remain the fallbacks).
 * `/playground`, `/assistant`, `/ai` on the main site now forward to the dedicated apps.
 * The Playground/AI React pages moved out of `client/`; their old CSS blocks in `client/src/styles/global.css` are now
   unused and can be deleted whenever you like.
+
+---
+
+# Multi-file workspaces (Playground)
+
+The Playground works on a **project**: folders, files, open tabs and an entry file. What the explorer shows is exactly what is
+saved, restored, downloaded and sent to the executor.
+
+## Code map
+
+| Where | What |
+|---|---|
+| `shared/workspace/core.js` | Pure rules shared by UI and API: path/name validation, limits, project validation, Java class/filename analysis. **Single source of truth.** |
+| `server/src/utils/workspaceCore.js` | Byte-identical copy for the server (Render may deploy `server/` alone). After editing the shared file run `npm run sync:workspace` in `server/`; `npm run check:workspace` fails if they drift. |
+| `server/src/config/playgroundLanguages.js` | Per-language execution config (extensions, headers, compiled/interpreted, `multiFile` flag). |
+| `server/src/utils/executionPayload.js` | Builds the executor request from a project (re-validates everything). |
+| `server/src/utils/projectWorkspace.js` | Legacy ↔ workspace translation (no DB access). |
+| `playground/src/workspace/` | `tree.js` (create/rename/move/delete/duplicate), `state.js` (tabs, entry, dirty tracking, drafts), `zip.js`, `importer.js`, `preview.js`, `languages.js`. |
+| `playground/src/components/` | `FileExplorer`, `FileTree`, `EditorTabs`, `Modals` (name / confirm / move), `ContextMenu`, `QuickOpen`, `OutputPanels`. |
+| `playground/src/hooks/useWorkspace.js` | State holder + draft persistence. |
+
+## API
+
+| Endpoint | Change |
+|---|---|
+| `GET /api/playground/my` | Unchanged shape (legacy fields, no file contents). |
+| `GET /api/playground/:id` | **New.** Owner (or admin) only. Returns the project plus `workspace: { files, entryFile, migrated }`. |
+| `POST /api/playground`, `PUT /api/playground/:id` | Accept `files: [{ id, path, type: 'file'\|'folder', content }]` and `entryFile`. Validated server-side (422 with a message). `PUT` also accepts `baseUpdatedAt` (409 `CONFLICT` if the stored project is newer) and `force`. Old bodies (`code`, `html`, …) still work. |
+| `POST /api/playground/execute` | Accepts `{ language, files: [{ path, content }], entryFile, stdin }` (new) **or** `{ language, code, stdin }` (unchanged; used by the mobile app). |
+
+Limits (frontend and backend): 200 items, 100 KB per file, 500 KB per project, 8 levels deep, 100-character names. Names may not contain `/ \ : * ? " < > |`
+or control characters, may not be `.`/`..` or reserved Windows names, and may not differ only by letter case within a folder.
+
+## Database
+
+`PlaygroundProject` gained `files: [{ id, path, type, content }]` and `entryFile`. **No migration script is needed.**
+Projects without `files` are presented as a one-file workspace at read time (Java → the public class name, e.g. `Calc.java`, else `Main.java`;
+other languages → `main.py`, `main.cpp`, …; HTML/CSS/JS → `index.html`, `style.css`, `script.js`) and are not rewritten until the owner saves.
+When a workspace is saved, `code`/`html`/`css`/`javascript` are mirrored from the entry file so the mobile app can still open it; a legacy-style
+save from the mobile app on a workspace project is merged into the entry file instead of being lost.
+
+## Execution contract (what the sandbox executor receives)
+
+The API server never runs code. It POSTs to `PISTON_URL` (your Cloudflare Worker / Piston) the same envelope as before, with these differences for projects:
+
+```jsonc
+{
+  "language": "java", "version": "*", "stdin": "...",
+  "files": [                        // real relative paths; the ENTRY FILE IS FIRST; never concatenated
+    { "name": "src/Main.java",    "content": "..." },
+    { "name": "src/Student.java", "content": "..." }
+  ],
+  "entry": "src/Main.java",         // new, informational for the executor
+  "main_class": "Main"              // Java only: package-qualified class to run
+}
+```
+
+* **Compiled languages** (Java, C, C++, C#): only sources (+ `.h/.hpp` headers for C/C++) are sent; README/data files are not, so the compiler is never handed a non-source.
+* **Interpreted languages** (Python, JavaScript, TypeScript, Ruby, PHP, Lua, Perl, R, Bash, Dart): every project file is sent so modules, JSON and data files exist on disk.
+* **Languages with `multiFile: false`** (Go, Rust, Kotlin, Swift, Scala, Haskell, SQL): a project with more than one source file gets a clear 422 instead of being silently truncated. Flip the flag in `playgroundLanguages.js` once your executor supports it.
+* The executor must write files at their relative paths (creating folders), compile **all** received sources, and treat the first file as the program to run (Piston's convention).
+  For Java it should run `main_class`. **The Worker source is not part of this repository, so this contract could not be exercised against it — see the testing notes below.**
+
+Java is validated **before** anything is sent: a public class/interface/enum/record must be declared in a file with the same name, and the entry file must contain `main`
+(the entry is auto-detected when not chosen). Nothing is renamed automatically.
+
+## Quick check against your real executor
+
+```bash
+curl -s -X POST "$PISTON_URL/api/v2/execute" -H 'Content-Type: application/json' -d '{
+  "language":"java","version":"*",
+  "files":[{"name":"Main.java","content":"public class Main{public static void main(String[] a){System.out.println(new Student().hi());}}"},
+           {"name":"Student.java","content":"public class Student{String hi(){return \"Hello Vishant\";}}"}],
+  "main_class":"Main"}'
+```
+(adjust the URL/path to however your Worker is exposed). It should print `Hello Vishant`. Repeat with a Python `main.py` + `utils.py`. If the executor only reads `files[0]`,
+multi-file runs will fail there and the Worker is the only thing to change.
+
+## Keyboard shortcuts
+
+`Ctrl/⌘+S` save · `Ctrl/⌘+Enter` run · `Ctrl/⌘+P` quick open (type `>` for commands, 3+ characters also searches file contents) · `Ctrl/⌘+Shift+P` commands ·
+`Ctrl/⌘+N` / `Alt+N` new file · `Ctrl/⌘+Shift+N` / `Alt+Shift+N` new folder · `Ctrl/⌘+W` / `Alt+W` close tab ·
+`F2` rename and `Delete` delete (only while the explorer has focus, so they never fire inside the editor). Chrome reserves `Ctrl+N`, `Ctrl+Shift+N` and `Ctrl+W`
+in normal tabs; the `Alt` variants always work.
+
+## Drafts
+
+`playground_workspace_v2` holds the whole workspace (files, folders, tabs, active file, entry, unsaved-change baseline). Switching language parks the current project in
+`playground_ws_by_language` so nothing is lost. The old `playground_draft` is migrated once and removed. A draft remembers the server version it started from, so saving it over
+a newer copy from another device asks before overwriting.

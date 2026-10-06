@@ -1,5 +1,6 @@
 import {
   LANGUAGE_EXTENSIONS,
+  LIMITS,
   WorkspaceError,
   analyzeJava,
   basename,
@@ -10,6 +11,7 @@ import {
   validateWorkspace,
 } from "@shared/workspace/core.js";
 import { defaultFileName, demos, initial } from "./languages.js";
+import { starterFor } from "./starter.js";
 import * as tree from "./tree.js";
 
 // Workspace state, as plain data + pure transitions (the React hook is a thin
@@ -207,10 +209,24 @@ export const editFile = (ws, id, content) => {
 export const toggleFolder = (ws, id) => ({ ...ws, expanded: ws.expanded.includes(id) ? ws.expanded.filter((open) => open !== id) : [...ws.expanded, id] });
 export const setExpanded = (ws, id, open) => (ws.expanded.includes(id) === open ? ws : toggleFolder(ws, id));
 
-export const addFile = (ws, dirPath, typed, content = "") => {
-  const result = tree.createFile(ws.nodes, dirPath, typed, content);
-  const withNodes = { ...ws, nodes: result.nodes, expanded: [...ws.expanded, ...result.createdFolders.map((folder) => folder.id)] };
-  return { ws: openFile(withNodes, result.node.id), node: result.node };
+// New file. When the caller passes no content, the file starts with example code
+// for its type (see starter.js); pass "" to get a truly empty file.
+export const addFile = (ws, dirPath, typed, content) => {
+  const result = tree.createFile(ws.nodes, dirPath, typed, content ?? "");
+  let { nodes, node } = result;
+  if (content === undefined) {
+    const starter = starterFor({ path: node.path, language: ws.language, nodes: ws.nodes, hasMain: ws.nodes.some(hasMain) });
+    if (starter) {
+      const filled = nodes.map((item) => (item.id === node.id ? { ...item, content: starter } : item));
+      // Never let the example text be the reason a file cannot be created.
+      if (tree.totalBytes(filled) <= LIMITS.maxProjectBytes) {
+        nodes = filled;
+        node = filled.find((item) => item.id === node.id);
+      }
+    }
+  }
+  const withNodes = { ...ws, nodes, expanded: [...ws.expanded, ...result.createdFolders.map((folder) => folder.id)] };
+  return { ws: openFile(withNodes, node.id), node };
 };
 
 export const addFolder = (ws, dirPath, typed) => {

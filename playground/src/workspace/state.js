@@ -215,7 +215,7 @@ export const addFile = (ws, dirPath, typed, content) => {
   const result = tree.createFile(ws.nodes, dirPath, typed, content ?? "");
   let { nodes, node } = result;
   if (content === undefined) {
-    const starter = starterFor({ path: node.path, language: ws.language, nodes: ws.nodes, hasMain: ws.nodes.some(hasMain) });
+    const starter = starterFor({ path: node.path, language: ws.language, nodes: ws.nodes });
     if (starter) {
       const filled = nodes.map((item) => (item.id === node.id ? { ...item, content: starter } : item));
       // Never let the example text be the reason a file cannot be created.

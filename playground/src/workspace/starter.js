@@ -4,7 +4,7 @@ import { demos } from "./languages.js";
 // Starter ("example") code for a brand-new file, chosen from its name and folder.
 // Pure function, no side effects: state.js calls it when the user creates a file.
 //
-//   starterFor({ path: "src/com/app/Utils.java", language: "java", nodes, hasMain })
+//   starterFor({ path: "src/com/app/Utils.java", language: "java", nodes })
 //
 // - Java gets the right `package` (from a sibling file in the same folder, else from
 //   the folder path) and a class name that matches the file name.
@@ -51,7 +51,7 @@ const javaPackageFor = (path, nodes) => {
     .join(".");
 };
 
-const javaStarter = (path, nodes, hasMain) => {
+const javaStarter = (path, nodes) => {
   const stem = basename(path).replace(/\.java$/i, "");
   if (/^(package-info|module-info)$/i.test(stem)) return "";
 
@@ -63,11 +63,9 @@ const javaStarter = (path, nodes, hasMain) => {
   const pkg = javaPackageFor(path, nodes);
   const head = pkg ? `package ${pkg};\n\n` : "";
 
-  // The first runnable class gets main(); later files are reusable helpers.
-  if (!hasMain || stem === "Main") {
-    return `${head}${modifier}class ${className} {\n    public static void main(String[] args) {\n        System.out.println("Hello from ${className}!");\n    }\n}\n`;
-  }
-  return `${head}${modifier}class ${className} {\n    public static String greet(String name) {\n        return "Hello, " + name + "!";\n    }\n}\n`;
+  // Every Java starter is runnable on its own (Set as Entry File -> Run) and
+  // also reusable from other classes through greet().
+  return `${head}${modifier}class ${className} {\n    public static String greet(String name) {\n        return "Hello, " + name + "!";\n    }\n\n    public static void main(String[] args) {\n        System.out.println(greet("${className}"));\n    }\n}\n`;
 };
 
 const headerStarter = (name, ext) => {
@@ -94,14 +92,14 @@ const DEMO_LANGUAGE_BY_EXTENSION = (() => {
   return map;
 })();
 
-export const starterFor = ({ path, language = "", nodes = [], hasMain = false }) => {
+export const starterFor = ({ path, language = "", nodes = [] }) => {
   const name = basename(path);
   const ext = extname(name);
   const stem = ext ? name.slice(0, name.length - ext.length) : name;
 
   switch (ext) {
     case ".java":
-      return javaStarter(path, nodes, hasMain);
+      return javaStarter(path, nodes);
     case ".h":
     case ".hpp":
     case ".hh":

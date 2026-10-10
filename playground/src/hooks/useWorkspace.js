@@ -99,5 +99,8 @@ export default function useWorkspace() {
     return () => clearTimeout(timer);
   }, [ws]);
 
-  return { ws, apply, replace, load, switchLanguage };
+  // The newest workspace, even before React has re-rendered (used to serialise saves).
+  const latest = useCallback(() => ref.current, []);
+
+  return { ws, apply, replace, load, switchLanguage, latest };
 }

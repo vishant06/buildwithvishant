@@ -288,3 +288,6 @@
   .pg-select { max-width: 112px; }
   .pg-stdin .pg-pane-label small { display: none; }
 }
+.pg-chip-btn { background: transparent; color: var(--muted); font: inherit; cursor: pointer; }
+.pg-chip-btn:hover { color: var(--text); }
+.pg-chip-btn.on { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 50%, transparent); }

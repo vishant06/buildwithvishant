@@ -1,5 +1,6 @@
 import Editor from "@monaco-editor/react";
 import {
+  AlignLeft,
   Check,
   Cloud,
   Clock,
@@ -49,6 +50,7 @@ import ResizeHandle from "../components/ResizeHandle.jsx";
 import useIsDesktopLayout from "../hooks/useIsDesktopLayout.js";
 import useResizableSplit from "../hooks/useResizableSplit.js";
 import useWorkspace from "../hooks/useWorkspace.js";
+import { registerFormatters } from "../workspace/format.js";
 import { readUploads } from "../workspace/importer.js";
 import { EXTENSIONLESS_OK, detectProjectLanguage, extensionsFor, languages, monacoLanguageFor } from "../workspace/languages.js";
 import { buildPreview } from "../workspace/preview.js";
@@ -75,6 +77,8 @@ const TESTS_KEY = "playground_tests";
 const FONT_KEY = "playground_font_size";
 const STDIN_KEY = "playground_stdin";
 const EXPLORER_KEY = "playground_explorer_open";
+const AUTOSAVE_KEY = "playground_autosave";
+const AUTOSAVE_DELAY = 1500; // ms after the last keystroke
 const HISTORY_LIMIT = 20;
 const MIN_FONT = 11;
 const MAX_FONT = 24;
@@ -134,17 +138,19 @@ const textBlob = (text) => new Blob([text], { type: "text/plain;charset=utf-8" }
 const isLegacyWebTrio = (nodes) =>
   nodes.length === 3 && ["index.html", "style.css", "script.js"].every((path) => nodes.some((node) => node.type === "file" && node.path === path));
 
-const welcomeLines = [{ type: "info", text: "Ready. Press Run to execute your code." }];
+const welcomeLines = [{ type: "info", text: "Ready. Press Save & Run to execute your code." }];
 
 const Playground = forwardRef(function Playground(_props, ref) {
   const { isAuthenticated } = useAuth();
   const { theme } = useTheme();
-  const { ws, apply, load, switchLanguage } = useWorkspace();
+  const { ws, apply, load, switchLanguage, latest } = useWorkspace();
 
   const [stdin, setStdin] = useState(() => localStorage.getItem(STDIN_KEY) || "");
   const [saved, setSaved] = useState([]);
   const [savedOpen, setSavedOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [autoSave, setAutoSave] = useState(() => localStorage.getItem(AUTOSAVE_KEY) !== "0");
+  const [autoState, setAutoState] = useState("idle"); // idle | saving | error
   const [previewDoc, setPreviewDoc] = useState(() => (ws.language === "web" ? buildPreview(ws.nodes, S.entryPath(ws)) : ""));
   const [runVersion, setRunVersion] = useState(0);
   const [consoleLines, setConsoleLines] = useState(welcomeLines);
@@ -179,6 +185,8 @@ const Playground = forwardRef(function Playground(_props, ref) {
   const monacoRef = useRef(null);
   const previewFrameRef = useRef(null);
   const abortRef = useRef(null);
+  const saveChainRef = useRef(Promise.resolve());
+  const pausedRef = useRef(""); // `${projectId}:${serverUpdatedAt}` of a project whose auto-save hit a conflict
   const uploadRef = useRef(null);
   const revealRef = useRef(null);
   const modalOpenRef = useRef(false);
@@ -313,6 +321,8 @@ const Playground = forwardRef(function Playground(_props, ref) {
   useEffect(() => localStorage.setItem(FONT_KEY, String(fontSize)), [fontSize]);
   useEffect(() => localStorage.setItem(STDIN_KEY, stdin), [stdin]);
   useEffect(() => localStorage.setItem(EXPLORER_KEY, explorerOpen ? "1" : "0"), [explorerOpen]);
+  useEffect(() => localStorage.setItem(AUTOSAVE_KEY, autoSave ? "1" : "0"), [autoSave]);
+  useEffect(() => setAutoState("idle"), [ws.projectId]);
 
   // Rebuild the preview when a different web project is shown, and on every edit while "Live" is on.
   useEffect(() => {
@@ -362,6 +372,29 @@ const Playground = forwardRef(function Playground(_props, ref) {
     if (!editor) return;
     editor.focus();
     editor.trigger("toolbar", name, null);
+  };
+
+  // Format Document (Alt+Shift+F). Monaco formats JS / TS / JSON / CSS / HTML itself;
+  // workspace/format.js adds Java, C-family, Python and the other languages.
+  const formatDocument = async () => {
+    const editor = editorInstanceRef.current;
+    if (!editor || !activeNode) return say("Open a file to format it.");
+    const action = editor.getAction("editor.action.formatDocument");
+    if (!action || !action.isSupported()) return say(`There is no formatter for ${basename(activeNode.path)} yet.`);
+    editor.focus();
+    const before = editor.getValue();
+    try {
+      await action.run();
+      say(editor.getValue() === before ? "Already formatted." : "Formatted.");
+    } catch {
+      say("Could not format this file.");
+    }
+  };
+
+  const toggleAutoSave = () => {
+    const next = !autoSave;
+    setAutoSave(next);
+    say(next ? "Auto-save is on." : "Auto-save is off. Press Save (Ctrl+S) to store your changes.");
   };
 
   // ---- explorer actions
@@ -492,7 +525,7 @@ const Playground = forwardRef(function Playground(_props, ref) {
       onConfirm: () => {
         apply((current) => S.deleteItem(current, id));
         setModal(null);
-        say(`Deleted ${node.path}. Press Save to keep the deletion.`);
+        say(autoSave && isAuthenticated && ws.projectId ? `Deleted ${node.path}.` : `Deleted ${node.path}. Press Save to keep the deletion.`);
       },
     });
   };
@@ -765,11 +798,25 @@ const Playground = forwardRef(function Playground(_props, ref) {
 
   // ---- saving
 
-  const save = async (force = false) => {
-    if (!isAuthenticated) return say("Please login to save your playground.");
-    if (!ws.name.trim()) return say("Give the project a name before saving.");
-    const snapshot = ws;
-    setSaving(true);
+  // Every save (Save button, auto-save, Save & Run) goes through one queue, so two requests never
+  // race on the project's "updated at" check.
+  //   manual: Save button / Ctrl+S. Shows messages and the overwrite dialog on a conflict.
+  //   auto:   auto-save and Save & Run. Quiet; a conflict pauses auto-save instead of asking.
+  const persist = async (force, mode, target) => {
+    const snapshot = latest();
+    if (snapshot.projectId !== target.projectId || snapshot.language !== target.language) return false;
+    const manual = mode === "manual";
+    if (!isAuthenticated) {
+      if (manual) say("Please login to save your playground.");
+      return false;
+    }
+    if (!snapshot.name.trim()) {
+      if (manual) say("Give the project a name before saving.");
+      return false;
+    }
+    if (!manual && !S.isProjectDirty(snapshot)) return true;
+    if (manual) setSaving(true);
+    else setAutoState("saving");
     try {
       const payload = { ...S.toPayload(snapshot), title: snapshot.name.trim() };
       const result = snapshot.projectId
@@ -783,15 +830,55 @@ const Playground = forwardRef(function Playground(_props, ref) {
           : { ...current, projectId: marked.projectId, serverUpdatedAt: marked.serverUpdatedAt, baseline: marked.baseline, baselineMeta: marked.baselineMeta },
       );
       setSaved((items) => [result, ...items.filter((item) => item._id !== result._id)]);
-      say(`Saved ${snapshot.nodes.filter((node) => node.type === "file").length} file(s) to My Playground.`);
+      setAutoState("idle");
+      if (manual) say(`Saved ${snapshot.nodes.filter((node) => node.type === "file").length} file(s) to My Playground.`);
+      return true;
     } catch (error) {
       if (error.status === 409) {
-        setModal({ type: "confirm", title: "Project changed elsewhere", message: "This project was saved from another tab or device after you opened it. Overwrite it with the version in this editor?", confirmLabel: "Overwrite", danger: true, onConfirm: () => { setModal(null); save(true); } });
-      } else say(error.message);
+        pausedRef.current = `${snapshot.projectId}:${snapshot.serverUpdatedAt}`;
+        setAutoState("idle");
+        if (manual) {
+          setModal({ type: "confirm", title: "Project changed elsewhere", message: "This project was saved from another tab or device after you opened it. Overwrite it with the version in this editor?", confirmLabel: "Overwrite", danger: true, onConfirm: () => { setModal(null); save(true); } });
+        } else {
+          say("Not saved: this project was changed in another tab or device. Press Save to choose which version to keep.");
+        }
+      } else if (manual) {
+        say(error.message);
+      } else {
+        setAutoState("error");
+        say(`Auto-save failed: ${error.message}`);
+      }
+      return false;
     } finally {
-      setSaving(false);
+      if (manual) setSaving(false);
     }
   };
+
+  const save = (force = false, mode = "manual") => {
+    const target = { projectId: ws.projectId, language: ws.language };
+    const task = saveChainRef.current.then(() => persist(force, mode, target));
+    saveChainRef.current = task.catch(() => undefined);
+    return task;
+  };
+
+  // Save & Run: stores the project first (logged in and something changed), then runs it.
+  // A failed or conflicting save never blocks the run.
+  const saveAndRun = async () => {
+    if (running) return;
+    if (isAuthenticated) await save(false, "auto");
+    await run();
+  };
+
+  // Auto-save: a project that already lives in My Playground is saved a moment after you stop typing.
+  useEffect(() => {
+    if (!autoSave || !isAuthenticated || !ws.projectId || !projectDirty || !ws.name.trim()) return undefined;
+    if (pausedRef.current === `${ws.projectId}:${ws.serverUpdatedAt}`) return undefined;
+    const timer = setTimeout(() => {
+      save(false, "auto");
+    }, AUTOSAVE_DELAY);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ws, autoSave, isAuthenticated]);
 
   const openProject = async (project) => {
     const doOpen = async () => {
@@ -929,8 +1016,10 @@ const Playground = forwardRef(function Playground(_props, ref) {
   const commands = [
     { label: "New File", shortcut: "Ctrl+N", run: () => askNewFile() },
     { label: "New Folder", shortcut: "Ctrl+Shift+N", run: () => askNewFolder() },
-    { label: "Run", shortcut: "Ctrl+Enter", run },
+    { label: "Save & Run", shortcut: "Ctrl+Enter", run: saveAndRun },
     { label: "Save Workspace", shortcut: "Ctrl+S", run: () => save() },
+    { label: "Format Document", shortcut: "Alt+Shift+F", run: formatDocument },
+    { label: autoSave ? "Turn Auto-save Off" : "Turn Auto-save On", run: toggleAutoSave },
     { label: "Download Project", run: downloadProject },
     { label: "Upload Files or ZIP", run: () => uploadRef.current?.click() },
     { label: "Toggle Explorer", run: () => setExplorerOpen((open) => !open) },
@@ -944,9 +1033,15 @@ const Playground = forwardRef(function Playground(_props, ref) {
       if (modalOpenRef.current) return;
       const mod = event.ctrlKey || event.metaKey;
       const key = event.key.toLowerCase();
-      if (mod && event.key === "Enter") {
+      if (event.altKey && event.shiftKey && !mod && event.code === "KeyF") {
+        // Inside the editor Monaco handles this itself; this covers focus elsewhere.
+        if (!event.defaultPrevented) {
+          event.preventDefault();
+          formatDocument();
+        }
+      } else if (mod && event.key === "Enter") {
         event.preventDefault();
-        run();
+        saveAndRun();
       } else if (mod && !event.shiftKey && key === "s") {
         event.preventDefault();
         save();
@@ -973,6 +1068,8 @@ const Playground = forwardRef(function Playground(_props, ref) {
   });
 
   const ready = !running && !testsRunning;
+  const autoPaused = pausedRef.current === `${ws.projectId}:${ws.serverUpdatedAt}`;
+  const autoActive = isAuthenticated && autoSave && Boolean(ws.projectId) && !autoPaused && autoState !== "error";
   const rowBasis = (ratio) => (isDesktopLayout ? { flexBasis: `calc(${ratio}% - ${HANDLE_SIZE / 2}px)` } : undefined);
   const topBasis = rowBasis(splitY.ratio);
   const bottomBasis = rowBasis(100 - splitY.ratio);
@@ -982,7 +1079,7 @@ const Playground = forwardRef(function Playground(_props, ref) {
       {consoleLines.length === 0 && (
         <div className="pg-empty">
           <Terminal size={30} aria-hidden="true" />
-          <p>Click <strong>Run</strong> to execute. Output appears here.</p>
+          <p>Click <strong>Save &amp; Run</strong> to execute. Output appears here.</p>
           <small>{languageLabel} · {isWeb ? "Runs in your browser" : "Runs on cloud"}</small>
         </div>
       )}
@@ -1038,9 +1135,9 @@ const Playground = forwardRef(function Playground(_props, ref) {
             <button type="button" className={`pg-btn icon${explorerOpen ? " on" : ""}`} onClick={() => setExplorerOpen((open) => !open)} title="Toggle file explorer" aria-label="Toggle file explorer" aria-pressed={explorerOpen}>
               <PanelLeft size={16} />
             </button>
-            <button type="button" className="pg-run" onClick={run} disabled={running} title="Run (Ctrl+Enter)">
+            <button type="button" className="pg-run" onClick={saveAndRun} disabled={running} title="Save & Run (Ctrl+Enter)">
               {running ? <Loader2 size={15} className="pg-spin" /> : <Play size={15} />}
-              <span>{running ? "Running" : "Run"}</span>
+              <span>{running ? "Running" : "Save & Run"}</span>
             </button>
             <button type="button" className="pg-btn" onClick={stop} disabled={!running && !isWeb} title="Stop">
               <Square size={13} /> <span>Stop</span>
@@ -1062,6 +1159,7 @@ const Playground = forwardRef(function Playground(_props, ref) {
           <div className="pg-group">
             <button type="button" className="pg-btn icon-only-md" onClick={() => editorCommand("undo")} title="Undo"><Undo2 size={15} /><span>Undo</span></button>
             <button type="button" className="pg-btn icon-only-md" onClick={() => editorCommand("redo")} title="Redo"><Redo2 size={15} /><span>Redo</span></button>
+            <button type="button" className="pg-btn icon-only-md" onClick={formatDocument} disabled={!activeNode} title="Format document (Alt+Shift+F)"><AlignLeft size={15} /><span>Format</span></button>
             <button type="button" className="pg-btn icon-only-md" onClick={askReset} title="Reset to demo"><RotateCcw size={15} /><span>Reset</span></button>
             <span className="pg-sep" />
             <button type="button" className="pg-btn icon-only-md" onClick={copy} title="Copy this file">{copied ? <Check size={15} /> : <Copy size={15} />}<span>{copied ? "Copied" : "Copy"}</span></button>
@@ -1159,6 +1257,7 @@ const Playground = forwardRef(function Playground(_props, ref) {
                       onMount={(editorInstance, monaco) => {
                         editorInstanceRef.current = editorInstance;
                         monacoRef.current = monaco;
+                        registerFormatters(monaco);
                         editorInstance.onDidChangeCursorPosition((event) =>
                           setCursor({ line: event.position.lineNumber, column: event.position.column }),
                         );
@@ -1245,7 +1344,14 @@ const Playground = forwardRef(function Playground(_props, ref) {
         <footer className="pg-status">
           <span className="pg-ready"><span className={`dot ${ready ? "ok" : "busy"}`} aria-hidden="true" /> {status || (ready ? `Ready · ${languageLabel} ${isWeb ? "runs in browser" : "runs in cloud"}` : "Working…")}</span>
           <span className="pg-status-right">
-            {projectDirty && <span className="pg-chip warn" title="Changes not saved to My Playground">Unsaved</span>}
+            {projectDirty && autoPaused && <span className="pg-chip warn" title="This project changed in another tab or device. Press Save to choose which version to keep.">Auto-save paused</span>}
+            {projectDirty && !autoPaused && autoState === "error" && <span className="pg-chip warn" title="The last auto-save failed. It retries on your next edit, or press Save.">Auto-save failed</span>}
+            {projectDirty && !autoPaused && autoState !== "error" && (
+              autoActive
+                ? <span className="pg-chip" title="Saves by itself a moment after you stop typing">{autoState === "saving" ? "Saving…" : "Auto-saving soon"}</span>
+                : <span className="pg-chip warn" title="Changes not saved to My Playground">Unsaved</span>
+            )}
+            <button type="button" className={`pg-chip pg-chip-btn${autoSave ? " on" : ""}`} onClick={toggleAutoSave} aria-pressed={autoSave} title={isAuthenticated ? "Auto-save a project that is already in My Playground (click to toggle)" : "Log in to auto-save to My Playground. Your work is always kept as a draft in this browser."}>Auto-save {autoSave ? "on" : "off"}</button>
             {entry && !isWeb && <span className="pg-chip" title="Run starts from this file">Entry: {basename(entry)}</span>}
             <span className="pg-chip"><Cloud size={12} /> {isWeb ? "Local" : "Cloud"}</span>
             <span className="pg-chip"><Clock size={12} /> {runMs === null ? "-- ms" : `${runMs} ms`}</span>

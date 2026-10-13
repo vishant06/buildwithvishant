@@ -7,8 +7,6 @@ import { WorkspaceError } from '../utils/workspaceCore.js';
 const legacyFields = ['title', 'language', 'code', 'html', 'css', 'javascript'];
 const legacyPayload = (body) => Object.fromEntries(legacyFields.filter((field) => body[field] !== undefined).map((field) => [field, body[field]]));
 
-const isOwnerOrAdmin = (project, user) => String(project.owner) === String(user._id) || user.role === 'admin';
-
 // Express 4 does not catch rejected promises from async handlers; this keeps
 // validation errors as 4xx responses instead of unhandled rejections.
 const handle = (fn) => async (req, res) => {
@@ -25,7 +23,13 @@ const handle = (fn) => async (req, res) => {
   }
 };
 
-const findProject = async (id) => (mongoose.isValidObjectId(id) ? PlaygroundProject.findById(id) : null);
+// Every lookup is constrained by the owner taken from the verified session
+// (req.user is set by `protect` from the JWT, never from the request body,
+// query or URL). A project that belongs to somebody else is indistinguishable
+// from one that does not exist: both give the same 404, so ids cannot be probed.
+// Admins get no exception here: saved code is private to the account that owns it.
+const NOT_FOUND = { message: 'Playground project not found' };
+const findOwnedProject = async (id, user) => (mongoose.isValidObjectId(id) ? PlaygroundProject.findOne({ _id: id, owner: user._id }) : null);
 
 // Saved list: legacy fields only (as before). File contents are loaded on demand with GET /:id.
 export const mine = handle(async (req, res) => {
@@ -33,9 +37,8 @@ export const mine = handle(async (req, res) => {
 });
 
 export const getOne = handle(async (req, res) => {
-  const project = await findProject(req.params.id);
-  if (!project) return res.status(404).json({ message: 'Playground project not found' });
-  if (!isOwnerOrAdmin(project, req.user)) return res.status(403).json({ message: 'You can only open your own projects' });
+  const project = await findOwnedProject(req.params.id, req.user);
+  if (!project) return res.status(404).json(NOT_FOUND);
   res.json(serializeProject(project));
 });
 
@@ -50,9 +53,8 @@ export const create = handle(async (req, res) => {
 });
 
 export const update = handle(async (req, res) => {
-  const project = await findProject(req.params.id);
-  if (!project) return res.status(404).json({ message: 'Playground project not found' });
-  if (!isOwnerOrAdmin(project, req.user)) return res.status(403).json({ message: 'You can only edit your own projects' });
+  const project = await findOwnedProject(req.params.id, req.user);
+  if (!project) return res.status(404).json(NOT_FOUND);
 
   // Optimistic concurrency: a client that knows which version it started from
   // (workspace clients do) must not silently overwrite a newer save from
@@ -75,13 +77,13 @@ export const update = handle(async (req, res) => {
     Object.assign(fields, mirrorLegacyEdit(project, req.body));
   }
   Object.assign(project, fields);
+  project.owner = req.user._id; // ownership is never changed by a client request
   res.json(serializeProject(await project.save()));
 });
 
 export const remove = handle(async (req, res) => {
-  const project = await findProject(req.params.id);
-  if (!project) return res.status(404).json({ message: 'Playground project not found' });
-  if (!isOwnerOrAdmin(project, req.user)) return res.status(403).json({ message: 'You can only delete your own projects' });
-  await project.deleteOne();
+  const project = await findOwnedProject(req.params.id, req.user);
+  if (!project) return res.status(404).json(NOT_FOUND);
+  await PlaygroundProject.deleteOne({ _id: project._id, owner: req.user._id });
   res.json({ message: 'Playground project deleted' });
 });

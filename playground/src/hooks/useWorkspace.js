@@ -2,51 +2,22 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { WorkspaceError } from "@shared/workspace/core.js";
 import * as S from "../workspace/state.js";
 
-// Holds the workspace and keeps a draft in localStorage so a refresh loses nothing
+// Holds the workspace and keeps a draft in the browser so a refresh loses nothing
 // (files, folders, open tabs, active file, entry file, unsaved edits).
+//
+// Drafts are stored per account (see workspace/storage.js): `store` is bound to
+// the signed-in account's namespace, or to the guest namespace when signed out.
 //
 //   playground_workspace_v2   the current workspace
 //   playground_ws_by_language one parked workspace per language: switching language
 //                             never destroys the project you were working on
-//   playground_draft          the old single-file draft; migrated once, then removed
 const CURRENT_KEY = "playground_workspace_v2";
 const PARKED_KEY = "playground_ws_by_language";
-const LEGACY_KEY = "playground_draft";
 
-const read = (key) => {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-};
+const loadInitial = (store) => S.restore(store.getJson(CURRENT_KEY)) || S.templateWorkspace("web");
 
-const write = (key, value) => {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-    return true;
-  } catch {
-    return false; // quota or blocked storage: persistence is best-effort
-  }
-};
-
-const loadInitial = () => {
-  const current = S.restore(read(CURRENT_KEY));
-  if (current) return current;
-  const legacy = read(LEGACY_KEY);
-  if (legacy && typeof legacy === "object") {
-    try {
-      return S.workspaceFromLegacyDraft(legacy);
-    } catch {
-      // unreadable old draft: start fresh
-    }
-  }
-  return S.templateWorkspace("web");
-};
-
-export default function useWorkspace() {
-  const [ws, setWs] = useState(loadInitial);
+export default function useWorkspace(store) {
+  const [ws, setWs] = useState(() => loadInitial(store));
   const ref = useRef(ws);
 
   // apply(fn): fn(current) returns the next workspace, or { ws, ...extra }.
@@ -73,16 +44,16 @@ export default function useWorkspace() {
 
   // Park the current workspace (so nothing is lost) and show another.
   const park = (current) => {
-    const parked = read(PARKED_KEY) || {};
+    const parked = store.getJson(PARKED_KEY) || {};
     parked[current.language] = S.snapshot(current);
-    write(PARKED_KEY, parked);
+    store.setJson(PARKED_KEY, parked);
   };
 
   const switchLanguage = useCallback((language) => {
     const current = ref.current;
     if (current.language === language) return;
     park(current);
-    const parked = S.restore((read(PARKED_KEY) || {})[language]);
+    const parked = S.restore((store.getJson(PARKED_KEY) || {})[language]);
     replace(parked && parked.language === language ? parked : S.templateWorkspace(language));
   }, [replace]);
 
@@ -94,10 +65,17 @@ export default function useWorkspace() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (write(CURRENT_KEY, S.snapshot(ws))) localStorage.removeItem(LEGACY_KEY);
+      store.setJson(CURRENT_KEY, S.snapshot(ws));
     }, 350);
     return () => clearTimeout(timer);
   }, [ws]);
+
+  // On unmount (sign-out or account switch) flush the last edits into the
+  // namespace they belong to. `store` is bound to the previous account here,
+  // so nothing can land in the next account's draft.
+  useEffect(() => () => {
+    store.setJson(CURRENT_KEY, S.snapshot(ref.current));
+  }, []);
 
   // The newest workspace, even before React has re-rendered (used to serialise saves).
   const latest = useCallback(() => ref.current, []);

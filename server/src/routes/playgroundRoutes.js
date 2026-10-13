@@ -14,6 +14,16 @@ import {
     execute
 } from '../controllers/executionController.js';
 const router = express.Router();
+// Saved code and run output are per-account: never let a browser, proxy or CDN
+// store them, and never serve one visitor's response to another.
+router.use((_req, res, next) => {
+    res.set({
+        'Cache-Control': 'private, no-store, max-age=0',
+        Pragma: 'no-cache',
+        Vary: 'Authorization, Origin'
+    });
+    next();
+});
 router.post('/execute', rateLimit({
     windowMs: 60000,
     limit: 10,

@@ -8,7 +8,9 @@
     "start": "node src/server.js",
     "seed:admin": "node src/seedAdmin.js",
     "sync:workspace": "node -e \"require('fs').copyFileSync('../shared/workspace/core.js','src/utils/workspaceCore.js')\"",
-    "check:workspace": "node -e \"const f=require('fs');if(f.readFileSync('../shared/workspace/core.js','utf8')!==f.readFileSync('src/utils/workspaceCore.js','utf8')){console.error('workspaceCore.js is out of sync: run npm run sync:workspace');process.exit(1)}\""
+    "check:workspace": "node -e \"const f=require('fs');if(f.readFileSync('../shared/workspace/core.js','utf8')!==f.readFileSync('src/utils/workspaceCore.js','utf8')){console.error('workspaceCore.js is out of sync: run npm run sync:workspace');process.exit(1)}\"",
+    "test": "node --test --experimental-test-module-mocks tests/*.test.js",
+    "audit:playground": "node scripts/auditPlaygroundOwnership.js"
   },
   "dependencies": {
     "axios": "^1.20.0",

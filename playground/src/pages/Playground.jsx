@@ -55,6 +55,7 @@ import { readUploads } from "../workspace/importer.js";
 import { EXTENSIONLESS_OK, detectProjectLanguage, extensionsFor, languages, monacoLanguageFor } from "../workspace/languages.js";
 import { buildPreview } from "../workspace/preview.js";
 import * as S from "../workspace/state.js";
+import { GUEST, createScopedStore } from "../workspace/storage.js";
 import * as tree from "../workspace/tree.js";
 import { createZip } from "../workspace/zip.js";
 import "./playground.css";
@@ -94,23 +95,6 @@ const RAIL = [
   { id: "c", tag: "C", label: "C", tone: "c" },
 ];
 
-const readJson = (key, fallback) => {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch {
-    return fallback;
-  }
-};
-
-const writeJson = (key, value) => {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    // Storage full or blocked — persistence is best-effort.
-  }
-};
-
 const uid = () => Math.random().toString(36).slice(2, 10);
 
 // Turns the /playground/execute response into console lines.
@@ -140,12 +124,32 @@ const isLegacyWebTrio = (nodes) =>
 
 const welcomeLines = [{ type: "info", text: "Ready. Press Save & Run to execute your code." }];
 
-const Playground = forwardRef(function Playground(_props, ref) {
-  const { isAuthenticated } = useAuth();
+// `namespace` identifies whose workspace this is (an account, or the guest). The
+// parent mounts this component with `key={namespace}`, so signing out or switching
+// accounts discards every piece of state below and starts from that account's own data.
+const Playground = forwardRef(function Playground({ namespace = GUEST }, ref) {
+  const { token, isAuthenticated: hasToken, logout } = useAuth();
+  const isAuthenticated = hasToken && namespace !== GUEST;
   const { theme } = useTheme();
-  const { ws, apply, load, switchLanguage, latest } = useWorkspace();
+  const store = useMemo(() => createScopedStore(namespace), [namespace]);
+  const { ws, apply, load, switchLanguage, latest } = useWorkspace(store);
 
-  const [stdin, setStdin] = useState(() => localStorage.getItem(STDIN_KEY) || "");
+  // Requests that touch saved projects are pinned to the session this instance
+  // was running under. A save still queued when the user signs out or switches
+  // account therefore finishes against its own account and can never be sent
+  // with the next account's token.
+  const tokenRef = useRef(token);
+  tokenRef.current = token || tokenRef.current;
+  const authed = (options = {}) => ({ ...options, headers: { ...options.headers, ...(tokenRef.current ? { Authorization: `Bearer ${tokenRef.current}` } : {}) } });
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  const [stdin, setStdin] = useState(() => store.getText(STDIN_KEY) || "");
   const [saved, setSaved] = useState([]);
   const [savedOpen, setSavedOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -160,8 +164,8 @@ const Playground = forwardRef(function Playground(_props, ref) {
   const [runMs, setRunMs] = useState(null);
   const [copied, setCopied] = useState(false);
   const [tab, setTab] = useState("output");
-  const [history, setHistory] = useState(() => readJson(HISTORY_KEY, []));
-  const [tests, setTests] = useState(() => readJson(TESTS_KEY, {}));
+  const [history, setHistory] = useState(() => store.getJson(HISTORY_KEY, []));
+  const [tests, setTests] = useState(() => store.getJson(TESTS_KEY, {}));
   const [testResults, setTestResults] = useState({});
   const [testsRunning, setTestsRunning] = useState(false);
   const [fontSize, setFontSize] = useState(() => Number(localStorage.getItem(FONT_KEY)) || 14);
@@ -303,9 +307,15 @@ const Playground = forwardRef(function Playground(_props, ref) {
       setSaved([]);
       return;
     }
-    request("/playground/my")
-      .then(setSaved)
-      .catch(() => setSaved([]));
+    request("/playground/my", authed())
+      .then((items) => mounted.current && setSaved(Array.isArray(items) ? items : []))
+      .catch((error) => {
+        if (!mounted.current) return;
+        setSaved([]);
+        // The server rejected this session (expired or invalid): drop it everywhere
+        // instead of continuing with a stale identity.
+        if (error.status === 401) logout();
+      });
   }, [isAuthenticated]);
 
   useEffect(() => {
@@ -317,9 +327,13 @@ const Playground = forwardRef(function Playground(_props, ref) {
     return () => window.removeEventListener("message", listener);
   }, []);
 
-  useEffect(() => writeJson(TESTS_KEY, tests), [tests]);
+  useEffect(() => {
+    store.setJson(TESTS_KEY, tests);
+  }, [tests]);
   useEffect(() => localStorage.setItem(FONT_KEY, String(fontSize)), [fontSize]);
-  useEffect(() => localStorage.setItem(STDIN_KEY, stdin), [stdin]);
+  useEffect(() => {
+    store.setText(STDIN_KEY, stdin);
+  }, [stdin]);
   useEffect(() => localStorage.setItem(EXPLORER_KEY, explorerOpen ? "1" : "0"), [explorerOpen]);
   useEffect(() => localStorage.setItem(AUTOSAVE_KEY, autoSave ? "1" : "0"), [autoSave]);
   useEffect(() => setAutoState("idle"), [ws.projectId]);
@@ -695,7 +709,7 @@ const Playground = forwardRef(function Playground(_props, ref) {
   const pushHistory = (item) => {
     setHistory((items) => {
       const next = [item, ...items].slice(0, HISTORY_LIMIT);
-      writeJson(HISTORY_KEY, next);
+      store.setJson(HISTORY_KEY, next);
       return next;
     });
   };
@@ -820,8 +834,8 @@ const Playground = forwardRef(function Playground(_props, ref) {
     try {
       const payload = { ...S.toPayload(snapshot), title: snapshot.name.trim() };
       const result = snapshot.projectId
-        ? await request(`/playground/${snapshot.projectId}`, { method: "PUT", body: JSON.stringify({ ...payload, baseUpdatedAt: snapshot.serverUpdatedAt, force }) })
-        : await request("/playground", { method: "POST", body: JSON.stringify(payload) });
+        ? await request(`/playground/${snapshot.projectId}`, authed({ method: "PUT", body: JSON.stringify({ ...payload, baseUpdatedAt: snapshot.serverUpdatedAt, force }) }))
+        : await request("/playground", authed({ method: "POST", body: JSON.stringify(payload) }));
       const marked = S.markSaved(snapshot, result);
       // Keep anything typed while the request was in flight as unsaved.
       apply((current) =>
@@ -884,7 +898,7 @@ const Playground = forwardRef(function Playground(_props, ref) {
     const doOpen = async () => {
       setModal(null);
       try {
-        const full = await request(`/playground/${project._id}`);
+        const full = await request(`/playground/${project._id}`, authed());
         load(S.workspaceFromProject(full));
         setConsoleLines(welcomeLines);
         say(`Opened ${full.title}.`);
@@ -920,7 +934,7 @@ const Playground = forwardRef(function Playground(_props, ref) {
       onConfirm: async () => {
         setModal(null);
         try {
-          await request(`/playground/${project._id}`, { method: "DELETE" });
+          await request(`/playground/${project._id}`, authed({ method: "DELETE" }));
           setSaved((items) => items.filter((item) => item._id !== project._id));
           apply((current) => (current.projectId === project._id ? { ...current, projectId: null, serverUpdatedAt: null, baseline: {}, baselineMeta: null } : current));
           say("Saved project deleted.");
@@ -952,7 +966,7 @@ const Playground = forwardRef(function Playground(_props, ref) {
   const clearOutput = () => {
     if (tab === "history") {
       setHistory([]);
-      writeJson(HISTORY_KEY, []);
+      store.setJson(HISTORY_KEY, []);
     } else if (tab === "tests") {
       setTestResults({});
     } else {

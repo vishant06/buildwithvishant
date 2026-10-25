@@ -9,8 +9,16 @@ import {
     mine,
     remove,
     setVisibility,
+    shared,
     update
 } from '../controllers/playgroundController.js';
+import {
+    addMember,
+    leaveProject,
+    listMembers,
+    removeMember,
+    setMemberRole
+} from '../controllers/playgroundMembersController.js';
 import {
     execute
 } from '../controllers/executionController.js';
@@ -34,6 +42,7 @@ router.post('/execute', rateLimit({
 }), execute);
 router.use(protect);
 router.get('/my', mine);
+router.get('/shared', shared);
 router.get('/:id', getOne);
 router.post('/', create);
 router.put('/:id', update);
@@ -44,5 +53,17 @@ router.patch('/:id/visibility', rateLimit({
         message: 'Too many privacy changes. Please try again shortly.'
     }
 }), setVisibility);
+const peopleLimit = rateLimit({
+    windowMs: 60000,
+    limit: 30,
+    message: {
+        message: 'Too many sharing changes. Please try again shortly.'
+    }
+});
+router.get('/:id/members', listMembers);
+router.post('/:id/members', peopleLimit, addMember);
+router.patch('/:id/members/:userId', peopleLimit, setMemberRole);
+router.delete('/:id/members/me', leaveProject);
+router.delete('/:id/members/:userId', peopleLimit, removeMember);
 router.delete('/:id', remove);
 export default router;

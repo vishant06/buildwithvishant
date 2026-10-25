@@ -32,15 +32,65 @@ const handle = (fn) => async (req, res) => {
 const NOT_FOUND = { message: 'Playground project not found' };
 const findOwnedProject = async (id, user) => (mongoose.isValidObjectId(id) ? PlaygroundProject.findOne({ _id: id, owner: user._id }) : null);
 
+// Shared access. Roles rank owner > manager > editor > viewer. The role is always
+// read from the database for THIS request (never from the client), so removing or
+// demoting someone takes effect on their very next call.
+//   - not the owner and not listed          -> 404 (indistinguishable from "no such project")
+//   - listed, but the role is too low        -> 403 with a plain message
+export const ROLE_RANK = { viewer: 1, editor: 2, manager: 3, owner: 4 };
+export const accessTo = async (id, user, minRole = 'viewer') => {
+  if (!mongoose.isValidObjectId(id)) return { status: 404 };
+  const owned = await PlaygroundProject.findOne({ _id: id, owner: user._id });
+  if (owned) return { project: owned, role: 'owner' };
+  const shared = await PlaygroundProject.findOne({ _id: id, 'collaborators.user': user._id });
+  const entry = shared?.collaborators?.find((item) => String(item.user) === String(user._id));
+  if (!entry || !ROLE_RANK[entry.role]) return { status: 404 };
+  if (ROLE_RANK[entry.role] < ROLE_RANK[minRole]) return { status: 403, role: entry.role };
+  return { project: shared, role: entry.role };
+};
+const deny = (res, access) =>
+  access.status === 403
+    ? res.status(403).json({ message: 'Your access level does not allow this.' })
+    : res.status(404).json(NOT_FOUND);
+
+// What a client may see of a project. Collaborator ids never leave the server; people
+// who are not the owner do not get the owner id, and only owner / manager see privacy fields.
+const present = (project, role) => {
+  const { collaborators, ...rest } = serializeProject(project);
+  if (role !== 'owner') delete rest.owner;
+  if (role !== 'owner' && role !== 'manager') {
+    delete rest.visibility;
+    delete rest.publicSlug;
+    delete rest.publishedAt;
+  }
+  return { ...rest, myRole: role };
+};
+
 // Saved list: legacy fields only (as before). File contents are loaded on demand with GET /:id.
 export const mine = handle(async (req, res) => {
-  res.json(await PlaygroundProject.find({ owner: req.user._id }).select('-files').sort({ updatedAt: -1 }));
+  res.json(await PlaygroundProject.find({ owner: req.user._id }).select('-files -collaborators').sort({ updatedAt: -1 }));
+});
+
+// Projects other people shared with me (owner details are not included).
+export const shared = handle(async (req, res) => {
+  const rows = await PlaygroundProject.find({ 'collaborators.user': req.user._id }).select('title language updatedAt collaborators visibility publicSlug').sort({ updatedAt: -1 });
+  res.json(
+    rows
+      .map((row) => {
+        const role = row.collaborators?.find((item) => String(item.user) === String(req.user._id))?.role;
+        if (!ROLE_RANK[role]) return null;
+        const item = { _id: row._id, title: row.title, language: row.language, updatedAt: row.updatedAt, myRole: role };
+        if (role === 'manager') Object.assign(item, { visibility: row.visibility === 'public' ? 'public' : 'private', publicSlug: row.visibility === 'public' ? row.publicSlug : undefined });
+        return item;
+      })
+      .filter(Boolean)
+  );
 });
 
 export const getOne = handle(async (req, res) => {
-  const project = await findOwnedProject(req.params.id, req.user);
-  if (!project) return res.status(404).json(NOT_FOUND);
-  res.json(serializeProject(project));
+  const access = await accessTo(req.params.id, req.user, 'viewer');
+  if (!access.project) return deny(res, access);
+  res.json(present(access.project, access.role));
 });
 
 export const create = handle(async (req, res) => {
@@ -50,12 +100,13 @@ export const create = handle(async (req, res) => {
     Object.assign(fields, workspaceFieldsFrom(req.body, language));
   }
   const project = await PlaygroundProject.create({ ...fields, owner: req.user._id });
-  res.status(201).json(serializeProject(project));
+  res.status(201).json(present(project, 'owner'));
 });
 
 export const update = handle(async (req, res) => {
-  const project = await findOwnedProject(req.params.id, req.user);
-  if (!project) return res.status(404).json(NOT_FOUND);
+  const access = await accessTo(req.params.id, req.user, 'editor');
+  if (!access.project) return deny(res, access);
+  const { project, role } = access;
 
   // Optimistic concurrency: a client that knows which version it started from
   // (workspace clients do) must not silently overwrite a newer save from
@@ -78,8 +129,9 @@ export const update = handle(async (req, res) => {
     Object.assign(fields, mirrorLegacyEdit(project, req.body));
   }
   Object.assign(project, fields);
-  project.owner = req.user._id; // ownership is never changed by a client request
-  res.json(serializeProject(await project.save()));
+  // Ownership and the people list are never changed by this route: `fields` only ever
+  // holds the project content above, whoever (owner or editor) is saving.
+  res.json(present(await project.save(), role));
 });
 
 export const remove = handle(async (req, res) => {
@@ -113,8 +165,9 @@ export const setVisibility = handle(async (req, res) => {
   const target = req.body?.visibility;
   if (target !== 'public' && target !== 'private') return res.status(400).json({ message: 'visibility must be "public" or "private".' });
 
-  const project = await findOwnedProject(req.params.id, req.user);
-  if (!project) return res.status(404).json(NOT_FOUND);
+  const access = await accessTo(req.params.id, req.user, 'manager');
+  if (!access.project) return deny(res, access);
+  const { project } = access;
 
   if (target === 'private') {
     project.visibility = 'private';

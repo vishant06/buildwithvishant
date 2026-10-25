@@ -42,7 +42,7 @@ import request from "@shared/api/request.js";
 import { useAuth } from "@shared/auth/AuthContext.jsx";
 import { MAIN_SITE_URL } from "@shared/config/urls.js";
 import { useTheme } from "@shared/theme/ThemeContext.jsx";
-import { WorkspaceError, basename, checkJavaProject, dirname, isInside } from "@shared/workspace/core.js";
+import { LANGUAGE_EXTENSIONS, WorkspaceError, basename, checkJavaProject, dirname, isInside } from "@shared/workspace/core.js";
 import ContextMenu from "../components/ContextMenu.jsx";
 import EditorTabs from "../components/EditorTabs.jsx";
 import FileExplorer from "../components/FileExplorer.jsx";
@@ -85,6 +85,7 @@ const FONT_KEY = "playground_font_size";
 const STDIN_KEY = "playground_stdin";
 const EXPLORER_KEY = "playground_explorer_open";
 const AUTOSAVE_KEY = "playground_autosave";
+const FOLLOW_KEY = "playground_run_open_file";
 const AUTOSAVE_DELAY = 1500; // ms after the last keystroke
 const HISTORY_LIMIT = 20;
 const MIN_FONT = 11;
@@ -138,7 +139,8 @@ const Playground = forwardRef(function Playground({ namespace = GUEST }, ref) {
   const isAuthenticated = hasToken && namespace !== GUEST;
   const { theme } = useTheme();
   const store = useMemo(() => createScopedStore(namespace), [namespace]);
-  const { ws, apply, load, switchLanguage, latest } = useWorkspace(store);
+  const readOnlyRef = useRef(false);
+  const { ws, apply, load, switchLanguage, latest } = useWorkspace(store, () => readOnlyRef.current);
 
   // Requests that touch saved projects are pinned to the session this instance
   // was running under. A save still queued when the user signs out or switches
@@ -157,9 +159,11 @@ const Playground = forwardRef(function Playground({ namespace = GUEST }, ref) {
 
   const [stdin, setStdin] = useState(() => store.getText(STDIN_KEY) || "");
   const [saved, setSaved] = useState([]);
+  const [shared, setShared] = useState([]); // projects other people shared with me
   const [savedOpen, setSavedOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [autoSave, setAutoSave] = useState(() => localStorage.getItem(AUTOSAVE_KEY) !== "0");
+  const [runOpenFile, setRunOpenFile] = useState(() => localStorage.getItem(FOLLOW_KEY) !== "0"); // the file you are viewing is the one Run starts from
   const [autoState, setAutoState] = useState("idle"); // idle | saving | error
   const [previewDoc, setPreviewDoc] = useState(() => (ws.language === "web" ? buildPreview(ws.nodes, S.entryPath(ws)) : ""));
   const [runVersion, setRunVersion] = useState(0);
@@ -209,15 +213,25 @@ const Playground = forwardRef(function Playground({ namespace = GUEST }, ref) {
   const isWeb = ws.language === "web";
   const languageLabel = languages.find((item) => item.id === ws.language)?.label || ws.language;
   const activeNode = S.nodeById(ws, ws.activeId);
-  const entry = S.entryPath(ws);
+  // Run starts from the file that is open in the editor (when it is a source file of this
+  // project's language). Otherwise, or with this turned off, from the entry file set in the explorer.
+  const openPath = activeNode?.type === "file" ? activeNode.path : "";
+  const openIsRunnable = Boolean(openPath) && (LANGUAGE_EXTENSIONS[ws.language] || []).some((ext) => openPath.toLowerCase().endsWith(ext));
+  const followsOpenFile = runOpenFile && !isWeb && openIsRunnable;
+  const entry = followsOpenFile ? openPath : S.entryPath(ws);
   const dirtyIds = useMemo(() => new Set(S.dirtyFileIds(ws)), [ws]);
   const projectDirty = S.isProjectDirty(ws);
   const openFiles = ws.openIds.map((id) => S.nodeById(ws, id)).filter(Boolean);
   const allFiles = useMemo(() => ws.nodes.filter((node) => node.type === "file"), [ws.nodes]);
   const currentTests = tests[ws.language] || [];
-  const shareProject = ws.projectId ? saved.find((item) => item._id === ws.projectId) || null : null;
+  const sharedProject = ws.projectId && !saved.some((item) => item._id === ws.projectId) ? shared.find((item) => item._id === ws.projectId) || null : null;
+  const myRole = sharedProject?.myRole || "owner"; // owner | manager | editor | viewer
+  const canEdit = myRole !== "viewer";
+  const canManage = myRole === "owner" || myRole === "manager";
+  readOnlyRef.current = !canEdit;
+  const shareProject = ws.projectId ? saved.find((item) => item._id === ws.projectId) || sharedProject : null;
   const isPublic = shareProject?.visibility === "public" && Boolean(shareProject?.publicSlug);
-  const sync = useLocalSync({ namespace, projectId: ws.projectId, enabled: isAuthenticated, latest, apply, nodes: ws.nodes });
+  const sync = useLocalSync({ namespace, projectId: ws.projectId, enabled: isAuthenticated && canEdit, latest, apply, nodes: ws.nodes });
 
   // Live Java check (class name vs file name, entry has main), deferred so typing stays smooth.
   const deferredFiles = useDeferredValue(allFiles);
@@ -318,8 +332,12 @@ const Playground = forwardRef(function Playground({ namespace = GUEST }, ref) {
   useEffect(() => {
     if (!isAuthenticated) {
       setSaved([]);
+      setShared([]);
       return;
     }
+    request("/playground/shared", authed())
+      .then((items) => mounted.current && setShared(Array.isArray(items) ? items : []))
+      .catch(() => mounted.current && setShared([]));
     request("/playground/my", authed())
       .then((items) => mounted.current && setSaved(Array.isArray(items) ? items : []))
       .catch((error) => {
@@ -349,6 +367,7 @@ const Playground = forwardRef(function Playground({ namespace = GUEST }, ref) {
   }, [stdin]);
   useEffect(() => localStorage.setItem(EXPLORER_KEY, explorerOpen ? "1" : "0"), [explorerOpen]);
   useEffect(() => localStorage.setItem(AUTOSAVE_KEY, autoSave ? "1" : "0"), [autoSave]);
+  useEffect(() => localStorage.setItem(FOLLOW_KEY, runOpenFile ? "1" : "0"), [runOpenFile]);
   useEffect(() => setAutoState("idle"), [ws.projectId]);
 
   // Rebuild the preview when a different web project is shown, and on every edit while "Live" is on.
@@ -387,7 +406,9 @@ const Playground = forwardRef(function Playground({ namespace = GUEST }, ref) {
     setShareError("");
     try {
       const result = await request(`/playground/${ws.projectId}/visibility`, authed({ method: "PATCH", body: JSON.stringify({ visibility, ...extra }) }));
-      setSaved((items) => items.map((item) => (item._id === result._id ? { ...item, visibility: result.visibility, publicSlug: result.publicSlug || undefined, publishedAt: result.publishedAt || undefined } : item)));
+      const apply2 = (items) => items.map((item) => (item._id === result._id ? { ...item, visibility: result.visibility, publicSlug: result.publicSlug || undefined, publishedAt: result.publishedAt || undefined } : item));
+      setSaved(apply2);
+      setShared(apply2);
       say(visibility === "public" ? "Project is public. Anyone with the link can view it." : "Project is private again. The old link no longer works.");
     } catch (error) {
       setShareError(error.message);
@@ -407,6 +428,7 @@ const Playground = forwardRef(function Playground({ namespace = GUEST }, ref) {
     request(`/playground/${id}`, authed())
       .then((full) => {
         if (!mounted.current) return;
+        rememberShared(full);
         load(S.workspaceFromProject(full));
         say(`Opened ${full.title}.`);
       })
@@ -858,6 +880,12 @@ const Playground = forwardRef(function Playground({ namespace = GUEST }, ref) {
     return setModal({ type: "confirm", title: "Reset workspace?", message: "This replaces all files and folders with the demo program. Saved projects are not affected.", confirmLabel: "Reset", danger: true, onConfirm: doReset });
   };
 
+  // A project opened from somebody else's share: remember my role so the UI can adapt.
+  const rememberShared = (full) => {
+    if (!full.myRole || full.myRole === "owner") return;
+    setShared((items) => [{ _id: full._id, title: full.title, language: full.language, updatedAt: full.updatedAt, myRole: full.myRole, visibility: full.visibility, publicSlug: full.publicSlug }, ...items.filter((item) => item._id !== full._id)]);
+  };
+
   // ---- saving
 
   // Every save (Save button, auto-save, Save & Run) goes through one queue, so two requests never
@@ -870,6 +898,10 @@ const Playground = forwardRef(function Playground({ namespace = GUEST }, ref) {
     const manual = mode === "manual";
     if (!isAuthenticated) {
       if (manual) say("Please login to save your playground.");
+      return false;
+    }
+    if (snapshot.projectId && readOnlyRef.current) {
+      if (manual) say("View only: you don't have permission to save changes to this project.");
       return false;
     }
     if (!snapshot.name.trim()) {
@@ -891,7 +923,8 @@ const Playground = forwardRef(function Playground({ namespace = GUEST }, ref) {
           ? { ...marked, openIds: current.openIds, activeId: current.activeId, selectedId: current.selectedId, expanded: current.expanded }
           : { ...current, projectId: marked.projectId, serverUpdatedAt: marked.serverUpdatedAt, baseline: marked.baseline, baselineMeta: marked.baselineMeta },
       );
-      setSaved((items) => [result, ...items.filter((item) => item._id !== result._id)]);
+      if (result.myRole && result.myRole !== "owner") setShared((items) => items.map((item) => (item._id === result._id ? { ...item, title: result.title, updatedAt: result.updatedAt } : item)));
+      else setSaved((items) => [result, ...items.filter((item) => item._id !== result._id)]);
       setAutoState("idle");
       if (manual) say(`Saved ${snapshot.nodes.filter((node) => node.type === "file").length} file(s) to My Playground.`);
       return true;
@@ -927,13 +960,13 @@ const Playground = forwardRef(function Playground({ namespace = GUEST }, ref) {
   // A failed or conflicting save never blocks the run.
   const saveAndRun = async () => {
     if (running) return;
-    if (isAuthenticated) await save(false, "auto");
+    if (isAuthenticated && canEdit) await save(false, "auto");
     await run();
   };
 
   // Auto-save: a project that already lives in My Playground is saved a moment after you stop typing.
   useEffect(() => {
-    if (!autoSave || !isAuthenticated || !ws.projectId || !projectDirty || !ws.name.trim()) return undefined;
+    if (!autoSave || !isAuthenticated || !canEdit || !ws.projectId || !projectDirty || !ws.name.trim()) return undefined;
     if (pausedRef.current === `${ws.projectId}:${ws.serverUpdatedAt}`) return undefined;
     const timer = setTimeout(() => {
       save(false, "auto");
@@ -947,9 +980,10 @@ const Playground = forwardRef(function Playground({ namespace = GUEST }, ref) {
       setModal(null);
       try {
         const full = await request(`/playground/${project._id}`, authed());
+        rememberShared(full);
         load(S.workspaceFromProject(full));
         setConsoleLines(welcomeLines);
-        say(`Opened ${full.title}.`);
+        say(full.myRole === "viewer" ? `Opened ${full.title} (view only).` : `Opened ${full.title}.`);
         setSavedOpen(false);
       } catch (error) {
         say(error.message);
@@ -971,6 +1005,26 @@ const Playground = forwardRef(function Playground({ namespace = GUEST }, ref) {
     if (projectDirty) setModal({ type: "confirm", title: "Start a new project?", message: "The current workspace has unsaved changes.", confirmLabel: "New project", onConfirm: go });
     else go();
   };
+
+  const leaveProject = (project) =>
+    setModal({
+      type: "confirm",
+      title: "Leave shared project",
+      message: `Stop having access to "${project.title}"? The owner can add you again.`,
+      confirmLabel: "Leave",
+      danger: true,
+      onConfirm: async () => {
+        setModal(null);
+        try {
+          await request(`/playground/${project._id}/members/me`, authed({ method: "DELETE" }));
+          setShared((items) => items.filter((item) => item._id !== project._id));
+          apply((current) => (current.projectId === project._id ? { ...current, projectId: null, serverUpdatedAt: null, baseline: {}, baselineMeta: null } : current));
+          say("You left the project.");
+        } catch (error) {
+          say(error.message);
+        }
+      },
+    });
 
   const removeProject = (project) =>
     setModal({
@@ -1227,7 +1281,7 @@ const Playground = forwardRef(function Playground({ namespace = GUEST }, ref) {
             <button type="button" className="pg-btn icon-only-md" onClick={askReset} title="Reset to demo"><RotateCcw size={15} /><span>Reset</span></button>
             <span className="pg-sep" />
             <button type="button" className="pg-btn icon-only-md" onClick={copy} title="Copy this file">{copied ? <Check size={15} /> : <Copy size={15} />}<span>{copied ? "Copied" : "Copy"}</span></button>
-            <button type="button" className="pg-btn icon-only-md" onClick={() => save()} disabled={saving} title="Save workspace (Ctrl+S)">{saving ? <Loader2 size={15} className="pg-spin" /> : <Save size={15} />}<span>{saving ? "Saving" : "Save"}</span></button>
+            <button type="button" className="pg-btn icon-only-md" onClick={() => save()} disabled={saving || !canEdit} title={canEdit ? "Save workspace (Ctrl+S)" : "View only"}>{saving ? <Loader2 size={15} className="pg-spin" /> : <Save size={15} />}<span>{saving ? "Saving" : "Save"}</span></button>
             <button type="button" className="pg-btn icon-only-md" onClick={downloadProject} title="Download project (ZIP for several files)"><Download size={15} /><span>Download</span></button>
             <button type="button" className="pg-btn icon-only-md" onClick={() => { setShareError(""); setShareOpen(true); }} title={isPublic ? "Public: anyone with the link can view. Click to manage sharing" : "Private. Click to share"}>
               {isPublic ? <Globe size={15} /> : <Lock size={15} />}<span>Share</span>
@@ -1259,7 +1313,7 @@ const Playground = forwardRef(function Playground({ namespace = GUEST }, ref) {
                 <p className="pg-drawer-note">
                   <a href={loginHref}>Log in</a> to save and reopen your playgrounds.
                 </p>
-              ) : saved.length === 0 ? (
+              ) : saved.length === 0 && shared.length === 0 ? (
                 <p className="pg-drawer-note">No saved projects yet. Press Save (Ctrl+S).</p>
               ) : (
                 <ul>
@@ -1270,6 +1324,16 @@ const Playground = forwardRef(function Playground({ namespace = GUEST }, ref) {
                         <small>{languages.find((entryItem) => entryItem.id === item.language)?.label || "HTML / CSS / JS"}</small>
                       </button>
                       <button type="button" className="pg-btn icon" onClick={() => removeProject(item)} aria-label={"Delete " + item.title}><Trash2 size={14} /></button>
+                    </li>
+                  ))}
+                  {shared.length > 0 && <li className="pg-drawer-group">Shared with me</li>}
+                  {shared.map((item) => (
+                    <li key={item._id} className={item._id === ws.projectId ? "current" : ""}>
+                      <button type="button" onClick={() => openProject(item)}>
+                        <strong>{item.title}</strong>
+                        <small>{languages.find((entryItem) => entryItem.id === item.language)?.label || "HTML / CSS / JS"} · {item.myRole === "viewer" ? "view only" : item.myRole === "editor" ? "can edit" : "full access"}</small>
+                      </button>
+                      <button type="button" className="pg-btn icon" onClick={() => leaveProject(item)} aria-label={"Leave " + item.title} title="Leave this project"><X size={14} /></button>
                     </li>
                   ))}
                 </ul>
@@ -1345,6 +1409,7 @@ const Playground = forwardRef(function Playground({ namespace = GUEST }, ref) {
                         smoothScrolling: true,
                         automaticLayout: true,
                         tabSize: 2,
+                        readOnly: !canEdit,
                       }}
                     />
                   ) : (
@@ -1422,7 +1487,8 @@ const Playground = forwardRef(function Playground({ namespace = GUEST }, ref) {
                 : <span className="pg-chip warn" title="Changes not saved to My Playground">Unsaved</span>
             )}
             <button type="button" className={`pg-chip pg-chip-btn${autoSave ? " on" : ""}`} onClick={toggleAutoSave} aria-pressed={autoSave} title={isAuthenticated ? "Auto-save a project that is already in My Playground (click to toggle)" : "Log in to auto-save to My Playground. Your work is always kept as a draft in this browser."}>Auto-save {autoSave ? "on" : "off"}</button>
-            {isAuthenticated && ws.projectId && (
+            {myRole !== "owner" && <span className="pg-chip warn" title="Shared with you by the project owner">{myRole === "viewer" ? "View only" : myRole === "editor" ? "Editor" : "Full access"}</span>}
+            {isAuthenticated && ws.projectId && canManage && (
               <button type="button" className={`pg-chip pg-chip-btn${isPublic ? " vis-public" : ""}`} onClick={() => { setShareError(""); setShareOpen(true); }} title={isPublic ? "Public: anyone with the link can view" : "Private: only you can see this project"}>
                 {isPublic ? <Globe size={12} /> : <Lock size={12} />} {isPublic ? "Public" : "Private"}
               </button>
@@ -1432,7 +1498,12 @@ const Playground = forwardRef(function Playground({ namespace = GUEST }, ref) {
                 <span className={`sy-dot ${sync.state.status}`} aria-hidden="true" /> Sync: {STATUS_LABEL[sync.state.status]}
               </button>
             )}
-            {entry && !isWeb && <span className="pg-chip" title="Run starts from this file">Entry: {basename(entry)}</span>}
+            {entry && !isWeb && (
+              <button type="button" className="pg-chip pg-chip-btn" onClick={() => setRunOpenFile((value) => !value)} aria-pressed={runOpenFile}
+                title={runOpenFile ? "Run starts from the file you have open. Click to always use the entry file instead." : "Run starts from the entry file. Click to run the file you have open instead."}>
+                {followsOpenFile ? "Runs open file" : "Entry"}: {basename(entry)}
+              </button>
+            )}
             <span className="pg-chip"><Cloud size={12} /> {isWeb ? "Local" : "Cloud"}</span>
             <span className="pg-chip"><Clock size={12} /> {runMs === null ? "-- ms" : `${runMs} ms`}</span>
             <span className="pg-chip">Ln {cursor.line}, Col {cursor.column}</span>
@@ -1443,7 +1514,7 @@ const Playground = forwardRef(function Playground({ namespace = GUEST }, ref) {
       <input ref={uploadRef} type="file" multiple hidden onChange={(event) => handleUploads(event.target.files)} aria-label="Upload files or ZIP" />
 
       {shareOpen && (
-        <ShareModal ws={ws} project={shareProject} isAuthenticated={isAuthenticated} busy={shareBusy} error={shareError} onChange={changeVisibility} onClose={() => setShareOpen(false)} />
+        <ShareModal ws={ws} project={shareProject} role={myRole} api={(path, options) => request(path, authed(options))} isAuthenticated={isAuthenticated} busy={shareBusy} error={shareError} onChange={changeVisibility} onClose={() => setShareOpen(false)} />
       )}
       {syncOpen && (
         <SyncPanel

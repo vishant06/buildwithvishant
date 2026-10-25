@@ -37,6 +37,24 @@ const playgroundProjectSchema = new mongoose.Schema({
   // project is public and is removed (not just hidden) when it goes private.
   visibility: { type: String, enum: ['private', 'public'], default: 'private', required: true },
   publicSlug: { type: String, default: undefined, minlength: 8, maxlength: 32, index: { unique: true, sparse: true } },
-  publishedAt: { type: Date, default: undefined }
+  publishedAt: { type: Date, default: undefined },
+  // People the owner has given access to. Roles:
+  //   viewer  - open and read the project (and run it), never save
+  //   editor  - viewer + edit files and save
+  //   manager - "full access": editor + change privacy / the public link + manage
+  //             people (viewer / editor). Never delete the project, never touch the
+  //             owner or other managers; only the owner can grant 'manager'.
+  collaborators: {
+    type: [{
+      _id: false,
+      user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+      role: { type: String, enum: ['viewer', 'editor', 'manager'], default: 'viewer', required: true },
+      addedAt: { type: Date, default: Date.now },
+      addedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+    }],
+    default: undefined,
+    select: true
+  }
 }, { timestamps: true });
+playgroundProjectSchema.index({ 'collaborators.user': 1 }); // "shared with me" and access checks
 export default mongoose.model('PlaygroundProject', playgroundProjectSchema);

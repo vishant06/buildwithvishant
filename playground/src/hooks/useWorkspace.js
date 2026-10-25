@@ -16,9 +16,13 @@ const PARKED_KEY = "playground_ws_by_language";
 
 const loadInitial = (store) => S.restore(store.getJson(CURRENT_KEY)) || S.templateWorkspace("web");
 
-export default function useWorkspace(store) {
+// `isReadOnly()` (optional) is true while a project the user may only view is open: any change
+// to its files or folders is refused here, in one place, whatever part of the UI asked for it.
+export default function useWorkspace(store, isReadOnly) {
   const [ws, setWs] = useState(() => loadInitial(store));
   const ref = useRef(ws);
+  const isReadOnlyRef = useRef(isReadOnly);
+  isReadOnlyRef.current = isReadOnly;
 
   // apply(fn): fn(current) returns the next workspace, or { ws, ...extra }.
   // Validation problems come back as { ok: false, error } for the UI to show.
@@ -26,6 +30,7 @@ export default function useWorkspace(store) {
     try {
       const result = fn(ref.current);
       const next = result && result.nodes ? result : result.ws;
+      if (next.nodes !== ref.current.nodes && isReadOnlyRef.current?.()) return { ok: false, error: "View only: you don't have permission to change this project." };
       if (next !== ref.current) {
         ref.current = next;
         setWs(next);

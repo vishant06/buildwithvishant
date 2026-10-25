@@ -25,6 +25,7 @@ export const serializePublicProject = (doc, { viewerId } = {}) => {
 
   const entryVisible = nodes.some((node) => node.type === 'file' && node.path === entryFile);
   const isOwner = Boolean(viewerId) && String(viewerId) === String(plain.owner);
+  const isCollaborator = Boolean(viewerId) && (plain.collaborators || []).some((item) => String(item.user) === String(viewerId));
 
   const out = {
     slug: plain.publicSlug,
@@ -39,7 +40,8 @@ export const serializePublicProject = (doc, { viewerId } = {}) => {
     },
     isOwner
   };
+  // `isOwner` / `projectId` only tell a signed-in person that this is a project they can open themselves.
   // The internal id is only ever given to the owner (so "Open in editor" works).
-  if (isOwner) out.projectId = String(plain._id);
+  if (isOwner || isCollaborator) out.projectId = String(plain._id);
   return out;
 };

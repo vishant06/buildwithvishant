@@ -7,10 +7,11 @@
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "seed:admin": "node src/seedAdmin.js",
-    "sync:workspace": "node -e \"require('fs').copyFileSync('../shared/workspace/core.js','src/utils/workspaceCore.js')\"",
-    "check:workspace": "node -e \"const f=require('fs');if(f.readFileSync('../shared/workspace/core.js','utf8')!==f.readFileSync('src/utils/workspaceCore.js','utf8')){console.error('workspaceCore.js is out of sync: run npm run sync:workspace');process.exit(1)}\"",
+    "sync:workspace": "node -e \"const f=require('fs');f.copyFileSync('../shared/workspace/core.js','src/utils/workspaceCore.js');f.copyFileSync('../shared/workspace/rules.js','src/utils/workspaceRules.js')\"",
+    "check:workspace": "node -e \"const f=require('fs');for(const [a,b] of [['core.js','workspaceCore.js'],['rules.js','workspaceRules.js']]){if(f.readFileSync('../shared/workspace/'+a,'utf8')!==f.readFileSync('src/utils/'+b,'utf8')){console.error(b+' is out of sync: run npm run sync:workspace');process.exit(1)}}\"",
     "test": "node --test --experimental-test-module-mocks tests/*.test.js",
-    "audit:playground": "node scripts/auditPlaygroundOwnership.js"
+    "audit:playground": "node scripts/auditPlaygroundOwnership.js",
+    "migrate:visibility": "node scripts/migratePlaygroundVisibility.js"
   },
   "dependencies": {
     "axios": "^1.20.0",

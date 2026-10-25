@@ -1,4 +1,5 @@
 import dns from "dns";
+import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
@@ -14,6 +15,9 @@ import contactRoutes from './routes/contactRoutes.js';
 import resumeRoutes from './routes/resumeRoutes.js';
 import noteRoutes from './routes/noteRoutes.js';
 import playgroundRoutes from './routes/playgroundRoutes.js';
+import playgroundPublicRoutes from './routes/playgroundPublicRoutes.js';
+import PlaygroundProject from './models/PlaygroundProject.js';
+import { applyVisibilityMigration } from './migrations/playgroundVisibility.js';
 import adminRoutes from './routes/adminRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
 import searchRoutes from './routes/searchRoutes.js';
@@ -38,6 +42,18 @@ User.updateMany(
   { 'providers.0': { $exists: true }, isEmailVerified: { $ne: true } },
   { $set: { isEmailVerified: true } }
 ).catch((error) => console.error('OAuth email-verification backfill failed:', error));
+
+// Privacy migration (idempotent, non-destructive): every saved Playground project
+// without a valid `visibility` becomes 'private', and stray public links are
+// removed. It never makes anything public and never touches files or owners.
+// Waits for the database connection before running.
+mongoose.connection.once('open', () => {
+  applyVisibilityMigration(PlaygroundProject)
+    .then((result) => {
+      if (result.madePrivate || result.linksRemoved) console.log('Playground privacy migration:', result);
+    })
+    .catch((error) => console.error('Playground privacy migration failed:', error));
+});
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 // Explicit allowlist (main site, Playground, AI, localhost in development).
@@ -69,6 +85,8 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/resume', resumeRoutes);
 app.use('/api/notes', noteRoutes);
+// Public, read-only project view first (own router, no login, no write routes).
+app.use('/api/playground/public', playgroundPublicRoutes);
 app.use('/api/playground', playgroundRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/ai', aiRoutes);

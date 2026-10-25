@@ -33,6 +33,9 @@ import {
   ListChecks,
   AlertTriangle,
   Flag,
+  Globe,
+  HardDrive,
+  Lock,
 } from "lucide-react";
 import { forwardRef, useDeferredValue, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
 import request from "@shared/api/request.js";
@@ -46,10 +49,13 @@ import FileExplorer from "../components/FileExplorer.jsx";
 import { ConfirmModal, MoveModal, NameModal } from "../components/Modals.jsx";
 import { HistoryPanel, TestsPanel } from "../components/OutputPanels.jsx";
 import QuickOpen from "../components/QuickOpen.jsx";
+import ShareModal from "../components/ShareModal.jsx";
+import SyncPanel, { STATUS_LABEL } from "../components/SyncPanel.jsx";
 import ResizeHandle from "../components/ResizeHandle.jsx";
 import useIsDesktopLayout from "../hooks/useIsDesktopLayout.js";
 import useResizableSplit from "../hooks/useResizableSplit.js";
 import useWorkspace from "../hooks/useWorkspace.js";
+import useLocalSync from "../sync/useLocalSync.js";
 import { registerFormatters } from "../workspace/format.js";
 import { readUploads } from "../workspace/importer.js";
 import { EXTENSIONLESS_OK, detectProjectLanguage, extensionsFor, languages, monacoLanguageFor } from "../workspace/languages.js";
@@ -174,6 +180,10 @@ const Playground = forwardRef(function Playground({ namespace = GUEST }, ref) {
   const [modal, setModal] = useState(null); // { type, ... }
   const [menu, setMenu] = useState(null); // { x, y, items }
   const [quickOpen, setQuickOpen] = useState(null); // { initial }
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareBusy, setShareBusy] = useState(false);
+  const [shareError, setShareError] = useState("");
+  const [syncOpen, setSyncOpen] = useState(false);
 
   const isDesktopLayout = useIsDesktopLayout();
   const [explorerOpen, setExplorerOpen] = useState(() => {
@@ -194,7 +204,7 @@ const Playground = forwardRef(function Playground({ namespace = GUEST }, ref) {
   const uploadRef = useRef(null);
   const revealRef = useRef(null);
   const modalOpenRef = useRef(false);
-  modalOpenRef.current = Boolean(modal || quickOpen);
+  modalOpenRef.current = Boolean(modal || quickOpen || shareOpen || syncOpen);
 
   const isWeb = ws.language === "web";
   const languageLabel = languages.find((item) => item.id === ws.language)?.label || ws.language;
@@ -205,6 +215,9 @@ const Playground = forwardRef(function Playground({ namespace = GUEST }, ref) {
   const openFiles = ws.openIds.map((id) => S.nodeById(ws, id)).filter(Boolean);
   const allFiles = useMemo(() => ws.nodes.filter((node) => node.type === "file"), [ws.nodes]);
   const currentTests = tests[ws.language] || [];
+  const shareProject = ws.projectId ? saved.find((item) => item._id === ws.projectId) || null : null;
+  const isPublic = shareProject?.visibility === "public" && Boolean(shareProject?.publicSlug);
+  const sync = useLocalSync({ namespace, projectId: ws.projectId, enabled: isAuthenticated, latest, apply, nodes: ws.nodes });
 
   // Live Java check (class name vs file name, entry has main), deferred so typing stays smooth.
   const deferredFiles = useDeferredValue(allFiles);
@@ -365,6 +378,41 @@ const Playground = forwardRef(function Playground({ namespace = GUEST }, ref) {
     if (!result.ok) say(result.error);
     return result.ok;
   };
+
+  // ---- privacy / sharing (the server enforces it; this only asks for the change)
+
+  const changeVisibility = async (visibility, extra = {}) => {
+    if (!ws.projectId) return;
+    setShareBusy(true);
+    setShareError("");
+    try {
+      const result = await request(`/playground/${ws.projectId}/visibility`, authed({ method: "PATCH", body: JSON.stringify({ visibility, ...extra }) }));
+      setSaved((items) => items.map((item) => (item._id === result._id ? { ...item, visibility: result.visibility, publicSlug: result.publicSlug || undefined, publishedAt: result.publishedAt || undefined } : item)));
+      say(visibility === "public" ? "Project is public. Anyone with the link can view it." : "Project is private again. The old link no longer works.");
+    } catch (error) {
+      setShareError(error.message);
+    } finally {
+      setShareBusy(false);
+    }
+  };
+
+  // "Open in editor" from the public page: /?open=<projectId> (the API still checks ownership).
+  const openRequested = useRef(false);
+  useEffect(() => {
+    if (openRequested.current || !isAuthenticated) return;
+    const id = new URLSearchParams(window.location.search).get("open");
+    if (!id || !/^[a-f0-9]{24}$/i.test(id)) return;
+    openRequested.current = true;
+    window.history.replaceState({}, document.title, window.location.pathname);
+    request(`/playground/${id}`, authed())
+      .then((full) => {
+        if (!mounted.current) return;
+        load(S.workspaceFromProject(full));
+        say(`Opened ${full.title}.`);
+      })
+      .catch((error) => mounted.current && say(error.message));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]);
 
   // ---- editing
 
@@ -1034,6 +1082,8 @@ const Playground = forwardRef(function Playground({ namespace = GUEST }, ref) {
     { label: "Save Workspace", shortcut: "Ctrl+S", run: () => save() },
     { label: "Format Document", shortcut: "Alt+Shift+F", run: formatDocument },
     { label: autoSave ? "Turn Auto-save Off" : "Turn Auto-save On", run: toggleAutoSave },
+    { label: "Share Project…", run: () => setShareOpen(true) },
+    { label: "Local Folder Sync…", run: () => setSyncOpen(true) },
     { label: "Download Project", run: downloadProject },
     { label: "Upload Files or ZIP", run: () => uploadRef.current?.click() },
     { label: "Toggle Explorer", run: () => setExplorerOpen((open) => !open) },
@@ -1179,6 +1229,12 @@ const Playground = forwardRef(function Playground({ namespace = GUEST }, ref) {
             <button type="button" className="pg-btn icon-only-md" onClick={copy} title="Copy this file">{copied ? <Check size={15} /> : <Copy size={15} />}<span>{copied ? "Copied" : "Copy"}</span></button>
             <button type="button" className="pg-btn icon-only-md" onClick={() => save()} disabled={saving} title="Save workspace (Ctrl+S)">{saving ? <Loader2 size={15} className="pg-spin" /> : <Save size={15} />}<span>{saving ? "Saving" : "Save"}</span></button>
             <button type="button" className="pg-btn icon-only-md" onClick={downloadProject} title="Download project (ZIP for several files)"><Download size={15} /><span>Download</span></button>
+            <button type="button" className="pg-btn icon-only-md" onClick={() => { setShareError(""); setShareOpen(true); }} title={isPublic ? "Public: anyone with the link can view. Click to manage sharing" : "Private. Click to share"}>
+              {isPublic ? <Globe size={15} /> : <Lock size={15} />}<span>Share</span>
+            </button>
+            <button type="button" className="pg-btn icon-only-md" onClick={() => setSyncOpen(true)} title="Connect a local folder">
+              <HardDrive size={15} /><span>Sync</span>
+            </button>
             <span className="pg-sep" />
             <button type="button" className="pg-btn icon" onClick={() => setQuickOpen({ initial: "" })} title="Quick open (Ctrl+P)" aria-label="Quick open file"><Search size={15} /></button>
             <button type="button" className="pg-btn icon" onClick={() => setFontSize((size) => Math.max(MIN_FONT, size - 1))} title="Smaller text" aria-label="Smaller text"><Minus size={15} /></button>
@@ -1366,6 +1422,16 @@ const Playground = forwardRef(function Playground({ namespace = GUEST }, ref) {
                 : <span className="pg-chip warn" title="Changes not saved to My Playground">Unsaved</span>
             )}
             <button type="button" className={`pg-chip pg-chip-btn${autoSave ? " on" : ""}`} onClick={toggleAutoSave} aria-pressed={autoSave} title={isAuthenticated ? "Auto-save a project that is already in My Playground (click to toggle)" : "Log in to auto-save to My Playground. Your work is always kept as a draft in this browser."}>Auto-save {autoSave ? "on" : "off"}</button>
+            {isAuthenticated && ws.projectId && (
+              <button type="button" className={`pg-chip pg-chip-btn${isPublic ? " vis-public" : ""}`} onClick={() => { setShareError(""); setShareOpen(true); }} title={isPublic ? "Public: anyone with the link can view" : "Private: only you can see this project"}>
+                {isPublic ? <Globe size={12} /> : <Lock size={12} />} {isPublic ? "Public" : "Private"}
+              </button>
+            )}
+            {sync.available && sync.state.folderName && (
+              <button type="button" className="pg-chip pg-chip-btn" onClick={() => setSyncOpen(true)} title={`Local folder: ${sync.state.folderName}`}>
+                <span className={`sy-dot ${sync.state.status}`} aria-hidden="true" /> Sync: {STATUS_LABEL[sync.state.status]}
+              </button>
+            )}
             {entry && !isWeb && <span className="pg-chip" title="Run starts from this file">Entry: {basename(entry)}</span>}
             <span className="pg-chip"><Cloud size={12} /> {isWeb ? "Local" : "Cloud"}</span>
             <span className="pg-chip"><Clock size={12} /> {runMs === null ? "-- ms" : `${runMs} ms`}</span>
@@ -1376,6 +1442,17 @@ const Playground = forwardRef(function Playground({ namespace = GUEST }, ref) {
 
       <input ref={uploadRef} type="file" multiple hidden onChange={(event) => handleUploads(event.target.files)} aria-label="Upload files or ZIP" />
 
+      {shareOpen && (
+        <ShareModal ws={ws} project={shareProject} isAuthenticated={isAuthenticated} busy={shareBusy} error={shareError} onChange={changeVisibility} onClose={() => setShareOpen(false)} />
+      )}
+      {syncOpen && (
+        <SyncPanel
+          sync={sync}
+          language={ws.language}
+          onClose={() => setSyncOpen(false)}
+          onConfirm={({ run, ...options }) => setModal({ type: "confirm", ...options, onConfirm: () => { setModal(null); run(); } })}
+        />
+      )}
       {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setMenu(null)} />}
       {modal?.type === "name" && <NameModal {...modal} onClose={() => setModal(null)} />}
       {modal?.type === "confirm" && <ConfirmModal {...modal} onClose={() => setModal(null)} />}

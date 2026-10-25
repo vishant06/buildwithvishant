@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { useAuth } from '@shared/auth/AuthContext.jsx';
 import AppNavbar from '@shared/components/AppNavbar.jsx';
 import Playground from './pages/Playground.jsx';
+import PublicProject from './pages/PublicProject.jsx';
 import { namespaceFor } from './workspace/storage.js';
 
 export default function App() {
@@ -13,6 +14,19 @@ export default function App() {
   // workspace -- files, tabs, history, selections -- is unmounted and rebuilt
   // from the new account's own data, never carried over.
   const namespace = namespaceFor(token);
+
+  // Public, read-only project links look like /p/<slug>.
+  const publicSlug = /^\/p\/([A-Za-z0-9_-]{8,32})\/?$/.exec(window.location.pathname)?.[1];
+  if (publicSlug) {
+    return (
+      <div className="bwv-app">
+        <AppNavbar app="playground" />
+        <main className="bwv-app-body">
+          <PublicProject slug={publicSlug} />
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="bwv-app">

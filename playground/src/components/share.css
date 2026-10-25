@@ -1,0 +1,57 @@
+/* Share dialog, sync panel and the public viewer. Uses the existing theme variables. */
+.sh-modal, .sy-modal { width: min(560px, 100%); max-height: 90vh; display: flex; flex-direction: column; }
+.sh-modal .ws-modal-body, .sy-modal .ws-modal-body { overflow-y: auto; }
+.sh-state { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); font-size: 0.86rem; }
+.sh-state span { color: var(--muted); }
+.sh-state.public { border-color: color-mix(in srgb, var(--success) 50%, transparent); background: color-mix(in srgb, var(--success) 10%, transparent); }
+.sh-state.private { background: color-mix(in srgb, var(--text) 5%, transparent); }
+.sh-link { display: flex; flex-direction: column; gap: 6px; }
+.sh-row { display: flex; gap: 8px; align-items: center; }
+.sh-row.wrap { flex-wrap: wrap; }
+.sh-row input { flex: 1; min-width: 0; }
+.sh-confirm { display: flex; flex-direction: column; gap: 10px; }
+a.pg-btn { text-decoration: none; }
+.pg-run.danger { background: var(--danger); }
+
+/* status chips */
+.pg-chip-btn.vis-public { color: var(--success); }
+.sy-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.sy-dot.synced { background: var(--success); }
+.sy-dot.syncing, .sy-dot.connecting, .sy-dot.preview { background: var(--accent); }
+.sy-dot.conflict, .sy-dot.review, .sy-dot.permission, .sy-dot.paused { background: var(--warn); }
+.sy-dot.error { background: var(--danger); }
+
+/* sync panel */
+.sy-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sy-head strong { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.sy-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.sy-section { display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid var(--border); }
+.sy-section h4 { margin: 0; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.sy-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.82rem; }
+.sy-item code { overflow-wrap: anywhere; }
+.sy-item .sy-actions { gap: 6px; }
+.sy-list { max-height: 160px; overflow: auto; margin: 0; padding-left: 18px; font-size: 0.8rem; color: var(--muted); }
+.sy-check { flex-direction: row !important; align-items: flex-start; gap: 8px !important; }
+.sy-check input { height: auto !important; margin-top: 3px; }
+.sy-diff { height: min(60vh, 460px); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.sy-modal.wide { width: min(980px, 100%); }
+@media (max-width: 640px) { .sh-row { flex-direction: column; align-items: stretch; } .sy-item { flex-direction: column; align-items: stretch; } }
+
+/* public viewer */
+.pv { flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--bg); color: var(--text); }
+.pv-head { flex: none; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 12px; border-bottom: 1px solid var(--border); background: var(--panel); }
+.pv-head h1 { margin: 0; font-size: 1rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pv-badge { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 999px; font-size: 0.72rem; font-weight: 700; background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+.pv-spacer { flex: 1; }
+.pv-body { flex: 1; min-height: 0; display: flex; }
+.pv-tree { flex: none; width: 260px; overflow: auto; border-right: 1px solid var(--border); background: var(--panel); padding: 6px 0; }
+.pv-tree button { display: flex; align-items: center; gap: 6px; width: 100%; padding: 4px 8px; border: 0; background: transparent; color: var(--text); font-size: 0.83rem; text-align: left; }
+.pv-tree button:hover { background: color-mix(in srgb, var(--text) 6%, transparent); }
+.pv-tree button.active { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.pv-tree .folder { color: var(--muted); font-weight: 600; cursor: default; }
+.pv-editor { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pv-path { flex: none; padding: 6px 12px; border-bottom: 1px solid var(--border); font-size: 0.8rem; color: var(--muted); }
+.pv-host { flex: 1; min-height: 0; }
+.pv-msg { margin: auto; max-width: 420px; padding: 24px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; color: var(--muted); }
+.pv-note { padding: 6px 12px; font-size: 0.78rem; color: var(--muted); border-top: 1px solid var(--border); }
+@media (max-width: 820px) { .pv-body { flex-direction: column; } .pv-tree { width: auto; max-height: 34%; border-right: 0; border-bottom: 1px solid var(--border); } }

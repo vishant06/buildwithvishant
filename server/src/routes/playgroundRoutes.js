@@ -8,6 +8,7 @@ import {
     getOne,
     mine,
     remove,
+    setVisibility,
     update
 } from '../controllers/playgroundController.js';
 import {
@@ -36,5 +37,12 @@ router.get('/my', mine);
 router.get('/:id', getOne);
 router.post('/', create);
 router.put('/:id', update);
+router.patch('/:id/visibility', rateLimit({
+    windowMs: 60000,
+    limit: 30,
+    message: {
+        message: 'Too many privacy changes. Please try again shortly.'
+    }
+}), setVisibility);
 router.delete('/:id', remove);
 export default router;

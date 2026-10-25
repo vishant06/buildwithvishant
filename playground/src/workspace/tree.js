@@ -188,3 +188,16 @@ export const uniquePath = (nodes, dirPath, name) => {
   for (let i = 1; findByPath(nodes, joinPath(dirPath, candidate)); i += 1) candidate = `${stem} (${i})${ext}`;
   return joinPath(dirPath, candidate);
 };
+
+// Moves a node (and, for a folder, everything in it) to any new path, creating
+// missing parent folders. Used by local-folder sync when a rename arrives from disk.
+export const relocateNode = (nodes, id, rawPath) => {
+  const target = findById(nodes, id);
+  if (!target) throw new WorkspaceError("That item no longer exists.");
+  const path = normalizePath(rawPath);
+  assertFree(nodes, path, id);
+  const folders = missingAncestors(nodes.filter((node) => node.id !== id), path);
+  const next = [...rewrite(nodes, id, path), ...folders];
+  assertLimits(next);
+  return { nodes: next, createdFolders: folders };
+};

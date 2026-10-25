@@ -28,6 +28,15 @@ const playgroundProjectSchema = new mongoose.Schema({
   html: { type: String, default: '', maxlength: 100_000 }, css: { type: String, default: '', maxlength: 100_000 }, javascript: { type: String, default: '', maxlength: 100_000 },
   files: { type: [workspaceFileSchema], default: undefined },
   entryFile: { type: String, default: '', maxlength: 240 },
-  owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
+  owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  // Privacy. Every project is PRIVATE unless its owner explicitly publishes it.
+  // Only the exact string 'public' ever grants access, so a missing / null /
+  // unknown value can never expose a project (the public lookup queries for
+  // visibility === 'public' directly in the database). `publicSlug` is the
+  // random, non-guessable token used in share links; it exists only while the
+  // project is public and is removed (not just hidden) when it goes private.
+  visibility: { type: String, enum: ['private', 'public'], default: 'private', required: true },
+  publicSlug: { type: String, default: undefined, minlength: 8, maxlength: 32, index: { unique: true, sparse: true } },
+  publishedAt: { type: Date, default: undefined }
 }, { timestamps: true });
 export default mongoose.model('PlaygroundProject', playgroundProjectSchema);

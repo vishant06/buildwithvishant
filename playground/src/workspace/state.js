@@ -1,6 +1,7 @@
 import {
   LANGUAGE_EXTENSIONS,
   LIMITS,
+  byteLength,
   WorkspaceError,
   analyzeJava,
   basename,
@@ -288,6 +289,116 @@ export const addFiles = (ws, dirPath, incoming) => {
 // After a successful save: this is now the saved baseline.
 export const markSaved = (ws, project) =>
   withBaseline({ ...ws, projectId: project._id, serverUpdatedAt: project.updatedAt, name: project.title });
+
+// ---- local-folder sync
+
+// Applies the Playground-side changes the sync engine planned. It never opens a
+// tab or moves focus, and every operation is guarded: `expectContent` is exactly
+// what the engine compared against, so if the file changed since (you typed
+// while the folder was being read) the operation is skipped and re-planned on
+// the next cycle instead of overwriting your edit.
+//   write  { path, content, expectContent }   expectContent null = "must not exist yet"
+//   delete { path, expectContent }
+//   folder { path }
+//   rmdir  { path }                            only if the folder is empty
+//   move   { from, to, id, expectContent }
+// Returns { ws, results: [{ op, ok, skipped?, deferred?, error? }] } in the same order.
+export const applySyncOps = (ws, ops) => {
+  let nodes = ws.nodes;
+  const results = [];
+  const removed = [];
+  const newFolders = [];
+  const skip = (op, reason) => results.push({ op, ok: false, skipped: true, error: reason });
+  const checkFile = (content) => {
+    if (byteLength(content) > LIMITS.maxFileBytes) throw new WorkspaceError(`File is larger than ${Math.round(LIMITS.maxFileBytes / 1000)} KB.`);
+  };
+
+  for (const op of ops) {
+    try {
+      if (op.kind === "write") {
+        checkFile(op.content);
+        const existing = tree.findByPath(nodes, op.path);
+        if (existing) {
+          if (existing.type !== "file") throw new WorkspaceError(`"${op.path}" is a folder in the Playground.`);
+          if (op.expectContent === null || existing.content !== op.expectContent) {
+            skip(op, "changed");
+            continue;
+          }
+          const next = nodes.map((node) => (node.id === existing.id ? { ...node, content: op.content } : node));
+          if (tree.totalBytes(next) > LIMITS.maxProjectBytes) throw new WorkspaceError("The project would exceed its size limit.");
+          nodes = next;
+        } else {
+          if (op.expectContent !== null && op.expectContent !== undefined) {
+            skip(op, "changed");
+            continue;
+          }
+          const created = tree.createFile(nodes, dirname(op.path), basename(op.path), op.content);
+          nodes = created.nodes;
+          newFolders.push(...created.createdFolders.map((folder) => folder.id));
+        }
+        results.push({ op, ok: true });
+      } else if (op.kind === "folder") {
+        if (!tree.findByPath(nodes, op.path)) {
+          const created = tree.createFolder(nodes, dirname(op.path), basename(op.path));
+          nodes = created.nodes;
+          newFolders.push(created.node.id, ...created.createdFolders.map((folder) => folder.id));
+        }
+        results.push({ op, ok: true });
+      } else if (op.kind === "delete") {
+        const existing = tree.findByPath(nodes, op.path);
+        if (!existing) {
+          results.push({ op, ok: true });
+          continue;
+        }
+        if (existing.type !== "file" || existing.content !== op.expectContent) {
+          skip(op, "changed");
+          continue;
+        }
+        const out = tree.deleteNode(nodes, existing.id);
+        nodes = out.nodes;
+        removed.push(...out.removedIds);
+        results.push({ op, ok: true });
+      } else if (op.kind === "rmdir") {
+        const existing = tree.findByPath(nodes, op.path);
+        if (!existing || existing.type !== "folder") {
+          results.push({ op, ok: true });
+        } else if (tree.descendantsOf(nodes, existing.path).length) {
+          results.push({ op, ok: false, deferred: true });
+        } else {
+          const out = tree.deleteNode(nodes, existing.id);
+          nodes = out.nodes;
+          removed.push(...out.removedIds);
+          results.push({ op, ok: true });
+        }
+      } else if (op.kind === "move") {
+        const existing = tree.findById(nodes, op.id) || tree.findByPath(nodes, op.from);
+        if (!existing || existing.type !== "file" || existing.path.toLowerCase() !== op.from.toLowerCase() || existing.content !== op.expectContent) {
+          skip(op, "changed");
+          continue;
+        }
+        const moved = tree.relocateNode(nodes, existing.id, op.to);
+        nodes = moved.nodes;
+        newFolders.push(...moved.createdFolders.map((folder) => folder.id));
+        results.push({ op, ok: true });
+      } else {
+        throw new WorkspaceError(`Unknown sync operation "${op.kind}".`);
+      }
+    } catch (error) {
+      if (!(error instanceof WorkspaceError)) throw error;
+      results.push({ op, ok: false, error: error.message });
+    }
+  }
+
+  if (nodes === ws.nodes) return { ws, results };
+  const gone = new Set(removed);
+  let next = { ...ws, nodes, expanded: [...new Set([...ws.expanded.filter((id) => !gone.has(id)), ...newFolders])] };
+  if (gone.size) {
+    next.selectedId = gone.has(ws.selectedId) ? null : ws.selectedId;
+    for (const id of gone) next = closeTab(next, id);
+    if (gone.has(ws.entryId)) next = { ...next, entryId: guessEntry(next.language, next.nodes) };
+  }
+  return { ws: next, results };
+};
 
 // ---- boundary with the API
 

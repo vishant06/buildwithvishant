@@ -230,6 +230,14 @@ const Playground = forwardRef(function Playground({ namespace = GUEST }, ref) {
   const canEdit = myRole !== "viewer";
   const canManage = myRole === "owner" || myRole === "manager";
   readOnlyRef.current = !canEdit;
+
+  // The file you open becomes the project's entry file (the ENTRY badge in the explorer moves to it
+  // and it is saved with the project). Only source files of the project's language count, so opening
+  // a README or a stylesheet never changes it. Turn it off with the chip in the footer.
+  useEffect(() => {
+    if (!runOpenFile || !canEdit || !openIsRunnable || !activeNode || ws.entryId === activeNode.id) return;
+    apply((current) => (current.activeId === activeNode.id ? S.setEntry(current, activeNode.id) : current));
+  }, [runOpenFile, canEdit, openIsRunnable, activeNode?.id, ws.entryId]); // eslint-disable-line react-hooks/exhaustive-deps
   const shareProject = ws.projectId ? saved.find((item) => item._id === ws.projectId) || sharedProject : null;
   const isPublic = shareProject?.visibility === "public" && Boolean(shareProject?.publicSlug);
   const sync = useLocalSync({ namespace, projectId: ws.projectId, enabled: isAuthenticated && canEdit, latest, apply, nodes: ws.nodes });
@@ -1501,7 +1509,7 @@ const Playground = forwardRef(function Playground({ namespace = GUEST }, ref) {
             )}
             {entry && (!isWeb || followsOpenFile) && (
               <button type="button" className="pg-chip pg-chip-btn" onClick={() => setRunOpenFile((value) => !value)} aria-pressed={runOpenFile}
-                title={runOpenFile ? "Run starts from the file you have open. Click to always use the entry file instead." : "Run starts from the entry file. Click to run the file you have open instead."}>
+                title={runOpenFile ? "The file you open becomes the entry file automatically. Click to turn this off." : "Entry file stays as you set it. Click to make the open file the entry automatically."}>
                 {followsOpenFile ? "Runs open file" : "Entry"}: {basename(entry)}
               </button>
             )}

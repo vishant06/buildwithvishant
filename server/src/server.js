@@ -63,6 +63,15 @@ app.use(cors({
   origin: (origin, callback) => callback(null, !origin || isAllowedOrigin(origin)),
   credentials: true
 }));
+// Saving a project can carry up to ~10 MB of source (see LIMITS in workspaceCore.js). Only signed-in
+// requests to the project routes get the larger body limit; running code (/execute), the public view and
+// every other route keep the 1 MB limit, and anonymous requests never get the larger one.
+const largeJson = express.json({ limit: '12mb' });
+app.use('/api/playground', (req, res, next) => {
+  const signedIn = (req.headers.authorization || '').startsWith('Bearer ');
+  if (signedIn && !req.path.startsWith('/execute') && !req.path.startsWith('/public')) return largeJson(req, res, next);
+  return next();
+});
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));

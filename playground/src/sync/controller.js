@@ -15,6 +15,7 @@
 //  * conflicts are never auto-resolved
 //  * every write re-checks that the target still holds what was compared
 //  * sensitive / ignored / binary / oversized files never take part
+import { LIMITS } from "@shared/workspace/core.js";
 import { classifySyncPath } from "@shared/workspace/rules.js";
 import { LocalFolder } from "./localFs.js";
 import {
@@ -178,7 +179,7 @@ export class SyncController {
     try {
       const scan = await fs.scan({ includeSensitive: false });
       if (scan.truncated) throw new Error("That folder has too many items. Choose your project folder, not a parent directory.");
-      if (scan.tooMany) throw new Error(`That folder has more than the ${200} files and folders a Playground project can hold (after ignore rules). Add a .playgroundignore file or choose a smaller folder.`);
+      if (scan.tooMany) throw new Error(`That folder has more than the ${LIMITS.maxNodes} files and folders a Playground project can hold (after ignore rules). Add a .playgroundignore file or choose a smaller folder.`);
       const { plan, skipped } = await this.plan(scan, {}, false);
       this.candidate = { handle, fs };
       this.set({

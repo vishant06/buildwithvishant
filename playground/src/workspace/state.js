@@ -310,7 +310,7 @@ export const applySyncOps = (ws, ops) => {
   const newFolders = [];
   const skip = (op, reason) => results.push({ op, ok: false, skipped: true, error: reason });
   const checkFile = (content) => {
-    if (byteLength(content) > LIMITS.maxFileBytes) throw new WorkspaceError(`File is larger than ${Math.round(LIMITS.maxFileBytes / 1000)} KB.`);
+    if (byteLength(content) > LIMITS.maxFileBytes) throw new WorkspaceError(`File is larger than ${LIMITS.maxFileBytes / 1_000_000} MB.`);
   };
 
   for (const op of ops) {

@@ -146,7 +146,7 @@ test("sensitive files sync only after the user opts in", async () => {
 });
 
 test("oversized files are skipped, the rest still syncs", async () => {
-  const t = await setup({ local: { "big.txt": "x".repeat(100_001), "small.txt": "ok" } });
+  const t = await setup({ local: { "big.txt": "x".repeat(2_000_001), "small.txt": "ok" } });
   await t.connect();
   assert.equal(t.file("big.txt"), undefined); assert.equal(t.file("small.txt").content, "ok");
   assert.ok(t.ctl.state.skipped.some((s) => s.path === "big.txt" && s.kind === "large"));
@@ -232,14 +232,23 @@ test("a different project is never synced into the folder", async () => {
   assert.equal(t.folder.text("secret.js"), null);
 });
 
-test("too many files in the folder: error, nothing imported", async () => {
+test("a folder far over the project limit: clear error, nothing imported (200+ files are fine now)", async () => {
   const local = {};
-  for (let i = 0; i < 230; i += 1) local[`f${i}.txt`] = "x";
+  for (let i = 0; i < 20100; i += 1) local[`f${i}.txt`] = "x";
   const t = await setup({ local });
   await t.ctl.chooseFolder(t.folder);
   assert.notEqual(t.ctl.state.status, "preview");
   assert.match(t.ctl.state.error, /more than/);
   assert.equal(t.ws.nodes.length, 0);
+});
+
+test("hundreds of files sync (the old 200-file limit is gone)", async () => {
+  const local = {};
+  for (let i = 0; i < 450; i += 1) local[`d${i % 9}/f${i}.txt`] = `n${i}`;
+  const t = await setup({ local });
+  await t.connect();
+  assert.equal(t.ws.nodes.filter((n) => n.type === "file").length, 450);
+  assert.equal(t.ctl.state.status, "synced");
 });
 
 test("large one-sided deletion is flagged", async () => {

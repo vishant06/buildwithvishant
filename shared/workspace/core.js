@@ -8,9 +8,9 @@
 // through normalizePath()/validateWorkspace().
 
 export const LIMITS = Object.freeze({
-  maxNodes: 200, // files + folders in one project
-  maxFileBytes: 100_000, // one file (UTF-8 bytes)
-  maxProjectBytes: 500_000, // all file contents together
+  maxNodes: 20000, // files + folders in one project (the total size limit still applies)
+  maxFileBytes: 2_000_000, // one file (UTF-8 bytes)
+  maxProjectBytes: 10_000_000, // all file contents together (MongoDB documents are capped at 16 MB)
   maxDepth: 8, // folders + file name ("a/b/c.txt" has depth 3)
   maxNameLength: 100,
   maxPathLength: 240,
@@ -150,9 +150,9 @@ export const validateWorkspace = (input) => {
       const content = item.content === undefined || item.content === null ? '' : item.content;
       if (typeof content !== 'string') throw new WorkspaceError(`Content of "${path}" must be text.`);
       const bytes = byteLength(content);
-      if (bytes > LIMITS.maxFileBytes) throw new WorkspaceError(`"${path}" is too large (max ${Math.round(LIMITS.maxFileBytes / 1000)} KB per file).`);
+      if (bytes > LIMITS.maxFileBytes) throw new WorkspaceError(`"${path}" is too large (max ${LIMITS.maxFileBytes / 1_000_000} MB per file).`);
       totalBytes += bytes;
-      if (totalBytes > LIMITS.maxProjectBytes) throw new WorkspaceError(`The project is too large (max ${Math.round(LIMITS.maxProjectBytes / 1000)} KB in total).`);
+      if (totalBytes > LIMITS.maxProjectBytes) throw new WorkspaceError(`The project is too large (max ${LIMITS.maxProjectBytes / 1_000_000} MB in total).`);
       addNode({ id: item.id, path, type: 'file', content });
     } else {
       addNode({ id: item.id, path, type: 'folder' });

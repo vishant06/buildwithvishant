@@ -13,7 +13,7 @@
 const DB_NAME = "bwv-playground-sync";
 const DB_VERSION = 1;
 export const TRASH_LIMIT = 40;
-export const TRASH_MAX_CHARS = 1_000_000;
+export const TRASH_MAX_CHARS = 20_000_000;
 
 const wrap = (request) =>
   new Promise((resolve, reject) => {

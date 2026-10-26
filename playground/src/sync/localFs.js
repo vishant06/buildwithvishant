@@ -12,7 +12,7 @@ import { detectEol, normalizeText } from "./engine.js";
 export const supportsLocalSync = () =>
   typeof window !== "undefined" && window.isSecureContext && typeof window.showDirectoryPicker === "function";
 
-const MAX_VISITED = 4000; // entries looked at before giving up (a project folder, not a home directory)
+const MAX_VISITED = 60000; // entries looked at before giving up (a project folder, not a home directory)
 const PERMISSION = { mode: "readwrite" };
 
 export const pickFolder = () => window.showDirectoryPicker({ id: "bwv-playground-sync", mode: "readwrite" });
@@ -163,7 +163,7 @@ export class LocalFolder {
     if (cached && cached.lastModified === file.lastModified && cached.size === file.size) return cached.result;
     let result;
     if (file.size > LIMITS.maxFileBytes) {
-      result = { skip: { kind: "large", reason: `larger than ${Math.round(LIMITS.maxFileBytes / 1000)} KB` } };
+      result = { skip: { kind: "large", reason: `larger than ${LIMITS.maxFileBytes / 1_000_000} MB` } };
     } else {
       const decoded = decodeText(await file.arrayBuffer());
       result = decoded

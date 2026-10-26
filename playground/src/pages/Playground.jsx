@@ -216,8 +216,9 @@ const Playground = forwardRef(function Playground({ namespace = GUEST }, ref) {
   // Run starts from the file that is open in the editor (when it is a source file of this
   // project's language). Otherwise, or with this turned off, from the entry file set in the explorer.
   const openPath = activeNode?.type === "file" ? activeNode.path : "";
-  const openIsRunnable = Boolean(openPath) && (LANGUAGE_EXTENSIONS[ws.language] || []).some((ext) => openPath.toLowerCase().endsWith(ext));
-  const followsOpenFile = runOpenFile && !isWeb && openIsRunnable;
+  const runnableExtensions = isWeb ? [".html", ".htm"] : LANGUAGE_EXTENSIONS[ws.language] || [];
+  const openIsRunnable = Boolean(openPath) && runnableExtensions.some((ext) => openPath.toLowerCase().endsWith(ext));
+  const followsOpenFile = runOpenFile && openIsRunnable;
   const entry = followsOpenFile ? openPath : S.entryPath(ws);
   const dirtyIds = useMemo(() => new Set(S.dirtyFileIds(ws)), [ws]);
   const projectDirty = S.isProjectDirty(ws);
@@ -1275,19 +1276,19 @@ const Playground = forwardRef(function Playground({ namespace = GUEST }, ref) {
           <input className="pg-title" value={ws.name} maxLength={100} onChange={(event) => apply((current) => S.setName(current, event.target.value))} aria-label="Project name" />
 
           <div className="pg-group">
-            <button type="button" className="pg-btn icon-only-md" onClick={() => editorCommand("undo")} title="Undo"><Undo2 size={15} /><span>Undo</span></button>
-            <button type="button" className="pg-btn icon-only-md" onClick={() => editorCommand("redo")} title="Redo"><Redo2 size={15} /><span>Redo</span></button>
-            <button type="button" className="pg-btn icon-only-md" onClick={formatDocument} disabled={!activeNode} title="Format document (Alt+Shift+F)"><AlignLeft size={15} /><span>Format</span></button>
-            <button type="button" className="pg-btn icon-only-md" onClick={askReset} title="Reset to demo"><RotateCcw size={15} /><span>Reset</span></button>
+            <button type="button" className="pg-btn icon" onClick={() => editorCommand("undo")} title="Undo" aria-label="Undo"><Undo2 size={15} /></button>
+            <button type="button" className="pg-btn icon" onClick={() => editorCommand("redo")} title="Redo" aria-label="Redo"><Redo2 size={15} /></button>
+            <button type="button" className="pg-btn icon" onClick={formatDocument} disabled={!activeNode} title="Format document (Alt+Shift+F)" aria-label="Format document"><AlignLeft size={15} /></button>
+            <button type="button" className="pg-btn icon" onClick={askReset} title="Reset to demo" aria-label="Reset to demo"><RotateCcw size={15} /></button>
             <span className="pg-sep" />
-            <button type="button" className="pg-btn icon-only-md" onClick={copy} title="Copy this file">{copied ? <Check size={15} /> : <Copy size={15} />}<span>{copied ? "Copied" : "Copy"}</span></button>
-            <button type="button" className="pg-btn icon-only-md" onClick={() => save()} disabled={saving || !canEdit} title={canEdit ? "Save workspace (Ctrl+S)" : "View only"}>{saving ? <Loader2 size={15} className="pg-spin" /> : <Save size={15} />}<span>{saving ? "Saving" : "Save"}</span></button>
-            <button type="button" className="pg-btn icon-only-md" onClick={downloadProject} title="Download project (ZIP for several files)"><Download size={15} /><span>Download</span></button>
-            <button type="button" className="pg-btn icon-only-md" onClick={() => { setShareError(""); setShareOpen(true); }} title={isPublic ? "Public: anyone with the link can view. Click to manage sharing" : "Private. Click to share"}>
-              {isPublic ? <Globe size={15} /> : <Lock size={15} />}<span>Share</span>
+            <button type="button" className="pg-btn icon" onClick={copy} title="Copy this file" aria-label="Copy this file">{copied ? <Check size={15} /> : <Copy size={15} />}</button>
+            <button type="button" className="pg-btn icon" onClick={() => save()} disabled={saving || !canEdit} title={canEdit ? "Save workspace (Ctrl+S)" : "View only"} aria-label="Save">{saving ? <Loader2 size={15} className="pg-spin" /> : <Save size={15} />}</button>
+            <button type="button" className="pg-btn icon" onClick={downloadProject} title="Download project (ZIP for several files)" aria-label="Download project"><Download size={15} /></button>
+            <button type="button" className="pg-btn icon" onClick={() => { setShareError(""); setShareOpen(true); }} title={isPublic ? "Public: anyone with the link can view. Click to manage sharing" : "Private. Click to share"} aria-label="Share project">
+              {isPublic ? <Globe size={15} /> : <Lock size={15} />}
             </button>
-            <button type="button" className="pg-btn icon-only-md" onClick={() => setSyncOpen(true)} title="Connect a local folder">
-              <HardDrive size={15} /><span>Sync</span>
+            <button type="button" className="pg-btn icon" onClick={() => setSyncOpen(true)} title="Local folder sync (connect a folder on your computer)" aria-label="Local folder sync">
+              <HardDrive size={15} />
             </button>
             <span className="pg-sep" />
             <button type="button" className="pg-btn icon" onClick={() => setQuickOpen({ initial: "" })} title="Quick open (Ctrl+P)" aria-label="Quick open file"><Search size={15} /></button>
@@ -1498,7 +1499,7 @@ const Playground = forwardRef(function Playground({ namespace = GUEST }, ref) {
                 <span className={`sy-dot ${sync.state.status}`} aria-hidden="true" /> Sync: {STATUS_LABEL[sync.state.status]}
               </button>
             )}
-            {entry && !isWeb && (
+            {entry && (!isWeb || followsOpenFile) && (
               <button type="button" className="pg-chip pg-chip-btn" onClick={() => setRunOpenFile((value) => !value)} aria-pressed={runOpenFile}
                 title={runOpenFile ? "Run starts from the file you have open. Click to always use the entry file instead." : "Run starts from the entry file. Click to run the file you have open instead."}>
                 {followsOpenFile ? "Runs open file" : "Entry"}: {basename(entry)}

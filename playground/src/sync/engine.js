@@ -25,7 +25,7 @@ export const keyOf = (path) => path.toLowerCase();
 
 const memo = new Map();
 let memoChars = 0;
-const MEMO_MAX_CHARS = 1_500_000;
+const MEMO_MAX_CHARS = 12_000_000;
 
 export const hashContent = async (text) => {
   const normalized = normalizeText(text);

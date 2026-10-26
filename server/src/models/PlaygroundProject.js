@@ -18,14 +18,14 @@ const workspaceFileSchema = new mongoose.Schema({
   id: { type: String, required: true, maxlength: 64 },
   path: { type: String, required: true, maxlength: 240 },
   type: { type: String, enum: ['file', 'folder'], required: true },
-  content: { type: String, default: '', maxlength: 100_000 }
+  content: { type: String, default: '', maxlength: 2_000_000 }
 }, { _id: false });
 
 const playgroundProjectSchema = new mongoose.Schema({
   title: { type: String, required: true, trim: true, maxlength: 100 },
   language: { type: String, default: 'web', enum: ['web', ...Object.keys(executionLanguages)] },
-  code: { type: String, default: '', maxlength: 100_000 },
-  html: { type: String, default: '', maxlength: 100_000 }, css: { type: String, default: '', maxlength: 100_000 }, javascript: { type: String, default: '', maxlength: 100_000 },
+  code: { type: String, default: '', maxlength: 2_000_000 },
+  html: { type: String, default: '', maxlength: 2_000_000 }, css: { type: String, default: '', maxlength: 2_000_000 }, javascript: { type: String, default: '', maxlength: 2_000_000 },
   files: { type: [workspaceFileSchema], default: undefined },
   entryFile: { type: String, default: '', maxlength: 240 },
   owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },

@@ -1,7 +1,7 @@
 import { LIMITS, WorkspaceError, byteLength, normalizePath } from "@shared/workspace/core.js";
 
 // Minimal ZIP support, no dependencies.
-//  - createZip: "stored" (uncompressed) archive; plenty for text projects (<= 500 KB).
+//  - createZip: "stored" (uncompressed) archive; plenty for text projects.
 //  - readZip:   reads stored + deflate entries, with hard limits so a hostile
 //               archive can neither escape the project (zip-slip) nor blow up memory.
 // Nothing here ever executes extracted content.

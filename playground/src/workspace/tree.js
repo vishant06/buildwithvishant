@@ -52,7 +52,7 @@ const assertLimits = (nodes) => {
   for (const node of nodes) {
     if (depthOf(node.path) > LIMITS.maxDepth) throw new WorkspaceError(`Folders can be nested at most ${LIMITS.maxDepth} levels deep.`);
   }
-  if (totalBytes(nodes) > LIMITS.maxProjectBytes) throw new WorkspaceError(`The project is too large (max ${Math.round(LIMITS.maxProjectBytes / 1000)} KB in total).`);
+  if (totalBytes(nodes) > LIMITS.maxProjectBytes) throw new WorkspaceError(`The project is too large (max ${LIMITS.maxProjectBytes / 1_000_000} MB in total).`);
 };
 
 // A path may be used when nothing (ignoring letter case) is there already.

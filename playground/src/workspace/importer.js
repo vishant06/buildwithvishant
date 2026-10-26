@@ -5,7 +5,7 @@ import { readZip } from "./zip.js";
 // everything is size-limited and must decode as UTF-8 text.
 
 const readText = async (file) => {
-  if (file.size > LIMITS.maxFileBytes) throw new WorkspaceError(`"${file.name}" is too large (max ${Math.round(LIMITS.maxFileBytes / 1000)} KB per file).`);
+  if (file.size > LIMITS.maxFileBytes) throw new WorkspaceError(`"${file.name}" is too large (max ${LIMITS.maxFileBytes / 1_000_000} MB per file).`);
   const buffer = await file.arrayBuffer();
   let text;
   try {

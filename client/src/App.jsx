@@ -11,6 +11,9 @@ import Login from './pages/admin/Login.jsx';
 import Resume from './pages/Resume.jsx';
 import Notes from './pages/Notes.jsx';
 import NoteDetail from './pages/NoteDetail.jsx';
+import DocumentReader from './pages/DocumentReader.jsx';
+import NotesContributions from './pages/NotesContributions.jsx';
+import NotesUpload from './pages/NotesUpload.jsx';
 import Auth from './pages/Auth.jsx';
 import OAuthCallback from './pages/OAuthCallback.jsx';
 import Profile from './pages/Profile.jsx';
@@ -28,6 +31,9 @@ const App = () => (
       <Route path="/contact" element={<Navigate to="/#contact" replace />} />
       <Route path="/resume" element={<Resume />} />
       <Route path="/notes" element={<Notes />} />
+      <Route path="/notes/upload" element={<ProtectedRoute><NotesUpload /></ProtectedRoute>} />
+      <Route path="/notes/contributions" element={<ProtectedRoute><NotesContributions /></ProtectedRoute>} />
+      <Route path="/notes/doc/:slug" element={<DocumentReader />} />
       <Route path="/notes/:slug" element={<NoteDetail />} />
       {/* Playground and AI are separate apps now; these routes forward to them. */}
       <Route path="/playground" element={<AppRedirect app="playground" />} />

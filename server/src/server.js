@@ -14,6 +14,8 @@ import projectRoutes from './routes/projectRoutes.js';
 import contactRoutes from './routes/contactRoutes.js';
 import resumeRoutes from './routes/resumeRoutes.js';
 import noteRoutes from './routes/noteRoutes.js';
+import documentRoutes from './routes/documentRoutes.js';
+import { startMaintenance } from './services/documentMaintenance.js';
 import playgroundRoutes from './routes/playgroundRoutes.js';
 import playgroundPublicRoutes from './routes/playgroundPublicRoutes.js';
 import PlaygroundProject from './models/PlaygroundProject.js';
@@ -48,6 +50,7 @@ User.updateMany(
 // removed. It never makes anything public and never touches files or owners.
 // Waits for the database connection before running.
 mongoose.connection.once('open', () => {
+  startMaintenance();
   applyVisibilityMigration(PlaygroundProject)
     .then((result) => {
       if (result.madePrivate || result.linksRemoved) console.log('Playground privacy migration:', result);
@@ -61,7 +64,9 @@ app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 // not browser cross-origin requests and are let through as before.
 app.use(cors({
   origin: (origin, callback) => callback(null, !origin || isAllowedOrigin(origin)),
-  credentials: true
+  credentials: true,
+  // The PDF viewer reads PDFs in byte ranges and needs to see these response headers.
+  exposedHeaders: ['Content-Range', 'Accept-Ranges', 'Content-Length', 'Content-Disposition']
 }));
 // Saving a project can carry up to ~10 MB of source (see LIMITS in workspaceCore.js). Only signed-in
 // requests to the project routes get the larger body limit; running code (/execute), the public view and
@@ -75,7 +80,9 @@ app.use('/api/playground', (req, res, next) => {
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
-app.use(rateLimit({ windowMs: 15 * 60 * 1000, limit: 200 }));
+// PDF bytes and thumbnails have their own, larger limit (see routes/documentRoutes.js): opening one
+// document is many small range requests, which would otherwise exhaust this general limit.
+app.use(rateLimit({ windowMs: 15 * 60 * 1000, limit: 200, skip: (req) => /^\/api\/documents\/[a-z0-9-]+\/(file|thumbnail)$/.test(req.path) }));
 
 
 
@@ -94,6 +101,7 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/resume', resumeRoutes);
 app.use('/api/notes', noteRoutes);
+app.use('/api/documents', documentRoutes);
 // Public, read-only project view first (own router, no login, no write routes).
 app.use('/api/playground/public', playgroundPublicRoutes);
 app.use('/api/playground', playgroundRoutes);

@@ -5,7 +5,7 @@ import styles from './Layout.module.css';
 
 // /notes/:slug is the documentation-style reader (3 columns), which needs
 // more room than the default 1120px page container.
-const isNoteReader = (pathname) => /^\/notes\/[^/]+\/?$/.test(pathname);
+const isNoteReader = (pathname) => /^\/notes\/[^/]+\/?$/.test(pathname) || /^\/notes\/doc\/[^/]+\/?$/.test(pathname);
 
 const Layout = () => {
   const { pathname } = useLocation();

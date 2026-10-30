@@ -445,6 +445,48 @@ const Playground = forwardRef(function Playground({ namespace = GUEST }, ref) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
+  // "Try in Playground" from a community note: /?starter=<note-slug>. Only a reference travels in the URL.
+  // The code is fetched from the API (which applies the note's access rules), shown in a confirmation,
+  // and opened as a NEW unsaved workspace. Saved projects are never touched, nothing is saved or run
+  // until you choose to, and the example is size-checked by the API and again by the workspace rules.
+  const starterRequested = useRef(false);
+  useEffect(() => {
+    if (starterRequested.current) return;
+    const slug = new URLSearchParams(window.location.search).get("starter");
+    if (!slug) return;
+    starterRequested.current = true;
+    window.history.replaceState({}, document.title, window.location.pathname);
+    if (!/^[a-z0-9-]{3,80}$/.test(slug)) return;
+    request(`/documents/${slug}/code-example`, authed())
+      .then((example) => {
+        if (!mounted.current) return;
+        if (!languages.some((item) => item.id === example.language)) {
+          say("That example uses a language the Playground does not support.");
+          return;
+        }
+        const open = () => {
+          try {
+            load(S.workspaceFromExample(example));
+            setConsoleLines(welcomeLines);
+            say("Opened the example in a new, unsaved workspace.");
+          } catch (error) {
+            say(error instanceof WorkspaceError ? error.message : "Could not open that example.");
+          }
+          setModal(null);
+        };
+        const dirty = S.isProjectDirty(latest());
+        setModal({
+          type: "confirm",
+          title: "Open code example?",
+          message: `"${example.title || "Example"}" from the note "${example.documentTitle}" (${languages.find((item) => item.id === example.language)?.label || example.language}) opens in a new, unsaved workspace. Your saved projects are not changed and nothing runs until you press Run.${dirty ? " Your current unsaved changes stay in your browser draft for that language but may be replaced if you keep working here." : ""}`,
+          confirmLabel: "Open example",
+          onConfirm: open,
+        });
+      })
+      .catch((error) => mounted.current && say(error.message));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ---- editing
 
   const edit = (value) => {

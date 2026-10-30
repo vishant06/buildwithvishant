@@ -400,6 +400,16 @@ export const applySyncOps = (ws, ops) => {
   return { ws: next, results };
 };
 
+// A code example from a community note (see "Try in Playground"). Always a NEW, unsaved workspace
+// (no project id, nothing baselined as saved) containing only the example file.
+export const workspaceFromExample = ({ documentTitle = "Example", title = "", language, code }) => {
+  const first = templateWorkspace(language).nodes.find((node) => node.type === "file");
+  const className = language === "java" ? /\b(?:public\s+)?(?:final\s+)?class\s+([A-Za-z_]\w*)/.exec(code)?.[1] : "";
+  const path = className ? `${className}.java` : first.path; // Java needs the file name to match its public class
+  const name = `${documentTitle}${title ? ` - ${title}` : ""}`.slice(0, 100);
+  return workspaceFrom({ name, language, files: [{ path, type: "file", content: code }], entryFile: path, saved: false });
+};
+
 // ---- boundary with the API
 
 export const toPayload = (ws) => ({

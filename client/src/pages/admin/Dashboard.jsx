@@ -1,3 +1,4 @@
+import DocumentModeration from './DocumentModeration.jsx';
 import {
   Check,
   Eye,
@@ -1205,6 +1206,8 @@ const Dashboard = () => {
               </table>
             </div>
           </section>
+
+          <DocumentModeration />
 
           <section className="panel">
             <h2>Manage Emails</h2>

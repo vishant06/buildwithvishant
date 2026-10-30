@@ -83,9 +83,35 @@ schema.index({ 'file.sha256': 1 });
 schema.index({ status: 1, category: 1 });
 schema.index({ status: 1, tags: 1 });
 schema.index({ status: 1, removedAt: 1 });
+
 schema.index(
-  { title: 'text', description: 'text', subject: 'text', topic: 'text', tags: 'text', ownerName: 'text', course: 'text', subjectCode: 'text', university: 'text' },
-  { weights: { title: 10, subject: 6, topic: 6, tags: 6, description: 3, ownerName: 2, course: 2, subjectCode: 2, university: 2 }, name: 'document_search' }
+  {
+    title: 'text',
+    description: 'text',
+    subject: 'text',
+    topic: 'text',
+    tags: 'text',
+    ownerName: 'text',
+    course: 'text',
+    subjectCode: 'text',
+    university: 'text'
+  },
+  {
+    weights: {
+      title: 10,
+      subject: 6,
+      topic: 6,
+      tags: 6,
+      description: 3,
+      ownerName: 2,
+      course: 2,
+      subjectCode: 2,
+      university: 2
+    },
+    name: 'document_search',
+    language_override: 'textSearchLanguage'
+  }
 );
+
 
 export default mongoose.model('NoteDocument', schema);

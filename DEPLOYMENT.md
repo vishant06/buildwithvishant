@@ -208,3 +208,9 @@ in normal tabs; the `Alt` variants always work.
 `playground_workspace_v2` holds the whole workspace (files, folders, tabs, active file, entry, unsaved-change baseline). Switching language parks the current project in
 `playground_ws_by_language` so nothing is lost. The old `playground_draft` is migrated once and removed. A draft remembers the server version it started from, so saving it over
 a newer copy from another device asks before overwriting.
+
+## Playground sharing & local sync
+No new environment variables. The server migrates existing projects to `private` on start. Public links are `https://<playground-domain>/p/<slug>` (the existing SPA rewrite already serves it). See `PLAYGROUND_SHARING_SYNC.md`.
+
+## Community PDF notes
+New server env variables (all optional) are listed in `server/.env.example`; storage, moderation and AI details are in `COMMUNITY_NOTES.md`. Run `npm install` in `server/` (adds `pdfjs-dist`).

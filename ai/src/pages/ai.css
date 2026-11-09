@@ -137,3 +137,23 @@ h2.md-h { font-size: 1.25rem; } h3.md-h { font-size: 1.1rem; } h4.md-h, h5.md-h 
   .msg-assistant { gap: 10px; }
   .ai-jump { bottom: 90px; }
 }
+
+.ai-thread > .msg {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  margin-left: 0;
+  margin-right: 0;
+  align-self: stretch;
+  box-sizing: border-box;
+}
+
+.ai-thread > .msg.assistant {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.ai-thread > .msg.user {
+  display: flex;
+  justify-content: flex-end;
+}
